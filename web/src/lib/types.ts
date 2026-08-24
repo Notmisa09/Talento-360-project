@@ -162,3 +162,80 @@ export interface ExpedienteOut {
   datos_legales: DatosLegalesOut | null
   antiguedad_anios: number
 }
+
+export type EstadoVacanteEnum = "BORRADOR" | "PUBLICADA" | "CERRADA"
+export type EstadoPostulacionEnum =
+  | "RECIBIDA"
+  | "EN_FILTRO"
+  | "ENTREVISTA"
+  | "OFERTA"
+  | "CONTRATADO"
+  | "RECHAZADA"
+export type ModalidadEntrevistaEnum = "PRESENCIAL" | "VIRTUAL" | "TELEFONICA"
+
+export interface VacanteOut {
+  id: string
+  titulo: string
+  descripcion: string | null
+  departamento_id: string
+  sucursal_id: string
+  estado: EstadoVacanteEnum
+  fecha_publicacion: string | null
+  fecha_cierre: string | null
+  numero_posiciones: number
+  creado_en: string
+}
+
+export interface VacanteCreate {
+  titulo: string
+  descripcion?: string | null
+  departamento_id: string
+  sucursal_id: string
+  numero_posiciones: number
+}
+
+export interface CandidatoOut {
+  id: string
+  nombres: string
+  apellidos: string
+  email: string
+  telefono: string | null
+  cv_url: string | null
+  linkedin: string | null
+}
+
+export interface PostulacionOut {
+  id: string
+  vacante_id: string
+  candidato_id: string
+  estado: EstadoPostulacionEnum
+  fecha_postulacion: string
+  puntaje_filtro: number | null
+  motivo_rechazo: string | null
+}
+
+export interface EntrevistaOut {
+  id: string
+  postulacion_id: string
+  entrevistador_id: string
+  fecha_hora: string
+  modalidad: ModalidadEntrevistaEnum
+  comentarios: string | null
+  calificacion: number | null
+}
+
+export interface EntrevistaCreate {
+  entrevistador_id: string
+  fecha_hora: string
+  modalidad: ModalidadEntrevistaEnum
+  comentarios?: string | null
+}
+
+export interface ContratarPostulacionRequest {
+  cedula_o_dni: string
+  fecha_nacimiento: string
+  fecha_ingreso: string
+  puesto_id: string
+  tipo_contrato: TipoContratoEnum
+  salario: number
+}

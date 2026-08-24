@@ -1,5 +1,7 @@
 import { authStorage } from "@/lib/auth-storage"
 import type {
+  CandidatoOut,
+  ContratarPostulacionRequest,
   ContratoCreate,
   ContratoOut,
   DepartamentoCreate,
@@ -7,8 +9,11 @@ import type {
   EmpleadoCreate,
   EmpleadoOut,
   EmpleadoUpdate,
+  EntrevistaCreate,
+  EntrevistaOut,
   ExpedienteOut,
   PaginatedResponse,
+  PostulacionOut,
   PuestoCreate,
   PuestoOut,
   SucursalCreate,
@@ -17,6 +22,8 @@ import type {
   UsuarioCreate,
   UsuarioOut,
   UsuarioUpdate,
+  VacanteCreate,
+  VacanteOut,
 } from "@/lib/types"
 
 const API_BASE = "/api/v1"
@@ -245,6 +252,97 @@ export async function descargarDocumento(empleadoId: string, documentoId: string
   link.download = nombreArchivo
   link.click()
   URL.revokeObjectURL(url)
+}
+
+export async function listarVacantes(
+  page: number,
+  size = 20,
+  opts?: { estado?: string; departamentoId?: string }
+): Promise<PaginatedResponse<VacanteOut>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  if (opts?.estado) params.set("estado", opts.estado)
+  if (opts?.departamentoId) params.set("departamento_id", opts.departamentoId)
+  return authorizedRequest(`/vacantes?${params.toString()}`)
+}
+
+export async function crearVacante(data: VacanteCreate): Promise<VacanteOut> {
+  return authorizedRequest("/vacantes", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function publicarVacante(vacanteId: string): Promise<VacanteOut> {
+  return authorizedRequest(`/vacantes/${vacanteId}/publicar`, { method: "POST" })
+}
+
+export async function cerrarVacante(vacanteId: string): Promise<VacanteOut> {
+  return authorizedRequest(`/vacantes/${vacanteId}/cerrar`, { method: "POST" })
+}
+
+export async function listarPostulacionesDeVacante(vacanteId: string): Promise<PostulacionOut[]> {
+  return authorizedRequest(`/vacantes/${vacanteId}/postulaciones`)
+}
+
+export async function postularCandidato(vacanteId: string, candidatoId: string): Promise<PostulacionOut> {
+  return authorizedRequest(`/vacantes/${vacanteId}/postulaciones`, {
+    method: "POST",
+    body: JSON.stringify({ candidato_id: candidatoId }),
+  })
+}
+
+export async function listarCandidatos(page: number, size = 20): Promise<PaginatedResponse<CandidatoOut>> {
+  return authorizedRequest(`/candidatos?page=${page}&size=${size}`)
+}
+
+export async function crearCandidato(data: {
+  nombres: string
+  apellidos: string
+  email: string
+  telefono?: string | null
+  linkedin?: string | null
+  cv?: File | null
+}): Promise<CandidatoOut> {
+  const form = new FormData()
+  form.set("nombres", data.nombres)
+  form.set("apellidos", data.apellidos)
+  form.set("email", data.email)
+  if (data.telefono) form.set("telefono", data.telefono)
+  if (data.linkedin) form.set("linkedin", data.linkedin)
+  if (data.cv) form.set("cv", data.cv)
+  return authorizedRequest("/candidatos", { method: "POST", body: form })
+}
+
+export async function cambiarEstadoPostulacion(postulacionId: string, estado: string): Promise<PostulacionOut> {
+  return authorizedRequest(`/postulaciones/${postulacionId}/estado`, {
+    method: "PATCH",
+    body: JSON.stringify({ estado }),
+  })
+}
+
+export async function rechazarPostulacion(postulacionId: string, motivo: string | null): Promise<PostulacionOut> {
+  return authorizedRequest(`/postulaciones/${postulacionId}/rechazar`, {
+    method: "POST",
+    body: JSON.stringify({ motivo }),
+  })
+}
+
+export async function agendarEntrevista(postulacionId: string, data: EntrevistaCreate): Promise<EntrevistaOut> {
+  return authorizedRequest(`/postulaciones/${postulacionId}/entrevistas`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function listarEntrevistas(postulacionId: string): Promise<EntrevistaOut[]> {
+  return authorizedRequest(`/postulaciones/${postulacionId}/entrevistas`)
+}
+
+export async function contratarPostulacion(
+  postulacionId: string,
+  data: ContratarPostulacionRequest
+): Promise<EmpleadoOut> {
+  return authorizedRequest(`/postulaciones/${postulacionId}/contratar`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
 }
 
 export async function refresh(refreshToken: string): Promise<Token> {

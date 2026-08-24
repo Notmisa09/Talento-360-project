@@ -11,6 +11,12 @@ from app.modules.empleados.router import (
     puestos_router,
     sucursales_router,
 )
+from app.modules.reclutamiento.router import (
+    candidatos_router,
+    entrevistas_router,
+    postulaciones_router,
+    vacantes_router,
+)
 
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_PREFIX}/openapi.json")
 
@@ -31,6 +37,10 @@ app.include_router(departamentos_router, prefix=settings.API_V1_PREFIX)
 app.include_router(puestos_router, prefix=settings.API_V1_PREFIX)
 app.include_router(empleados_router, prefix=settings.API_V1_PREFIX)
 app.include_router(contratos_router, prefix=settings.API_V1_PREFIX)
+app.include_router(vacantes_router, prefix=settings.API_V1_PREFIX)
+app.include_router(candidatos_router, prefix=settings.API_V1_PREFIX)
+app.include_router(postulaciones_router, prefix=settings.API_V1_PREFIX)
+app.include_router(entrevistas_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["Health"])

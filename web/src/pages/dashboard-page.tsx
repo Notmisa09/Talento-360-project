@@ -14,7 +14,7 @@ import { AppLayout } from "@/components/app-layout"
 import { useAuth } from "@/hooks/use-auth"
 
 const modulos = [
-  { titulo: "Reclutamiento (ATS)", descripcion: "Vacantes, postulaciones y entrevistas", icon: Briefcase },
+  { titulo: "Reclutamiento (ATS)", descripcion: "Vacantes, postulaciones y entrevistas", icon: Briefcase, ruta: "/reclutamiento" },
   { titulo: "Expediente Digital", descripcion: "Datos personales, contratos y documentos", icon: IdCard, ruta: "/empleados" },
   { titulo: "Asistencia y Tiempo", descripcion: "Marcaje, permisos y vacaciones", icon: CalendarClock },
   { titulo: "Nomina", descripcion: "Calculo de salarios y volantes de pago", icon: Wallet },

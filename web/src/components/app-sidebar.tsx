@@ -29,7 +29,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/hooks/use-auth"
 
 const modulos = [
-  { titulo: "Reclutamiento (ATS)", icon: Briefcase },
   { titulo: "Asistencia y Tiempo", icon: CalendarClock },
   { titulo: "Nomina", icon: Wallet },
   { titulo: "Desempeno y KPIs", icon: ClipboardCheck },
@@ -73,16 +72,28 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {(user?.rol === "ADMIN_RRHH" || user?.rol === "SUPERVISOR") && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={location.pathname === "/empleados"}
-                    tooltip="Expediente Digital"
-                    render={<Link to="/empleados" />}
-                  >
-                    <IdCard />
-                    <span>Empleados</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location.pathname === "/empleados"}
+                      tooltip="Expediente Digital"
+                      render={<Link to="/empleados" />}
+                    >
+                      <IdCard />
+                      <span>Empleados</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location.pathname === "/reclutamiento"}
+                      tooltip="Reclutamiento (ATS)"
+                      render={<Link to="/reclutamiento" />}
+                    >
+                      <Briefcase />
+                      <span>Reclutamiento</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
               {user?.rol === "ADMIN_RRHH" && (
                 <SidebarMenuItem>

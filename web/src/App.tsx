@@ -8,6 +8,7 @@ import { ResetPasswordPage } from "@/pages/reset-password-page"
 import { DashboardPage } from "@/pages/dashboard-page"
 import { UsuariosPage } from "@/pages/usuarios-page"
 import { EmpleadosPage } from "@/pages/empleados-page"
+import { ReclutamientoPage } from "@/pages/reclutamiento-page"
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           </Route>
           <Route element={<ProtectedRoute allowedRoles={["ADMIN_RRHH", "SUPERVISOR"]} />}>
             <Route path="/empleados" element={<EmpleadosPage />} />
+            <Route path="/reclutamiento" element={<ReclutamientoPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
