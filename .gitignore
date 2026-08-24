@@ -4,3 +4,4 @@ __pycache__/
 *.db
 app/hrmsystemfastenv/
 .pytest_cache/
+/storage/

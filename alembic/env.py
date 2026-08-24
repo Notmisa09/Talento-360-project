@@ -10,6 +10,7 @@ from app.shared.models import Base
 
 # Importar los modelos de cada modulo para que se registren en Base.metadata
 from app.modules.auth import models as auth_models  # noqa: F401
+from app.modules.empleados import models as empleados_models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

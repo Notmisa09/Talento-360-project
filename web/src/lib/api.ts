@@ -1,5 +1,23 @@
 import { authStorage } from "@/lib/auth-storage"
-import type { PaginatedResponse, Token, UsuarioCreate, UsuarioOut, UsuarioUpdate } from "@/lib/types"
+import type {
+  ContratoCreate,
+  ContratoOut,
+  DepartamentoCreate,
+  DepartamentoOut,
+  EmpleadoCreate,
+  EmpleadoOut,
+  EmpleadoUpdate,
+  ExpedienteOut,
+  PaginatedResponse,
+  PuestoCreate,
+  PuestoOut,
+  SucursalCreate,
+  SucursalOut,
+  Token,
+  UsuarioCreate,
+  UsuarioOut,
+  UsuarioUpdate,
+} from "@/lib/types"
 
 const API_BASE = "/api/v1"
 
@@ -66,10 +84,12 @@ export async function me(accessToken: string): Promise<UsuarioOut> {
 async function authorizedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = authStorage.getAccessToken()
 
+  const isFormData = options.body instanceof FormData
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.body && !isFormData ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -131,6 +151,100 @@ export async function resetPassword(token: string, passwordNuevo: string): Promi
       err.code
     )
   }
+}
+
+export async function listarSucursales(): Promise<SucursalOut[]> {
+  return authorizedRequest("/sucursales")
+}
+
+export async function crearSucursal(data: SucursalCreate): Promise<SucursalOut> {
+  return authorizedRequest("/sucursales", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function listarDepartamentos(): Promise<DepartamentoOut[]> {
+  return authorizedRequest("/departamentos")
+}
+
+export async function crearDepartamento(data: DepartamentoCreate): Promise<DepartamentoOut> {
+  return authorizedRequest("/departamentos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function listarPuestos(departamentoId?: string): Promise<PuestoOut[]> {
+  const query = departamentoId ? `?departamento_id=${departamentoId}` : ""
+  return authorizedRequest(`/puestos${query}`)
+}
+
+export async function crearPuesto(data: PuestoCreate): Promise<PuestoOut> {
+  return authorizedRequest("/puestos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function listarEmpleados(
+  page: number,
+  size = 20,
+  opts?: { estado?: string; departamentoId?: string; q?: string }
+): Promise<PaginatedResponse<EmpleadoOut>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  if (opts?.estado) params.set("estado", opts.estado)
+  if (opts?.departamentoId) params.set("departamento_id", opts.departamentoId)
+  if (opts?.q) params.set("q", opts.q)
+  return authorizedRequest(`/empleados?${params.toString()}`)
+}
+
+export async function crearEmpleado(data: EmpleadoCreate): Promise<EmpleadoOut> {
+  return authorizedRequest("/empleados", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function actualizarEmpleado(empleadoId: string, data: EmpleadoUpdate): Promise<EmpleadoOut> {
+  return authorizedRequest(`/empleados/${empleadoId}`, { method: "PATCH", body: JSON.stringify(data) })
+}
+
+export async function cambiarEstadoEmpleado(empleadoId: string, estado: string): Promise<EmpleadoOut> {
+  return authorizedRequest(`/empleados/${empleadoId}/estado`, {
+    method: "PATCH",
+    body: JSON.stringify({ estado }),
+  })
+}
+
+export async function obtenerExpediente(empleadoId: string): Promise<ExpedienteOut> {
+  return authorizedRequest(`/empleados/${empleadoId}/expediente`)
+}
+
+export async function crearContrato(empleadoId: string, data: ContratoCreate): Promise<ContratoOut> {
+  return authorizedRequest(`/empleados/${empleadoId}/contratos`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function cargarDocumento(
+  empleadoId: string,
+  tipo: string,
+  archivo: File
+): Promise<{ id: string; nombre_archivo: string }> {
+  const form = new FormData()
+  form.set("tipo", tipo)
+  form.set("archivo", archivo)
+  return authorizedRequest(`/empleados/${empleadoId}/documentos`, { method: "POST", body: form })
+}
+
+export async function descargarDocumento(empleadoId: string, documentoId: string, nombreArchivo: string): Promise<void> {
+  const token = authStorage.getAccessToken()
+  const res = await fetch(`${API_BASE}/empleados/${empleadoId}/documentos/${documentoId}/descargar`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+
+  if (!res.ok) {
+    const err = await parseErrorBody(res)
+    throw new ApiError(detailToMessage(err.detail, "No se pudo descargar el documento"), res.status, err.code)
+  }
+
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = nombreArchivo
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 export async function refresh(refreshToken: string): Promise<Token> {

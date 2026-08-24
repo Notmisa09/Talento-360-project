@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "Talento360-HR <no-reply@talento360.com>"
 
+    # Directorio local donde se guardan archivos subidos (documentos de expediente, CVs, etc.)
+    STORAGE_DIR: str = "storage"
+
 
 @lru_cache
 def get_settings() -> Settings:

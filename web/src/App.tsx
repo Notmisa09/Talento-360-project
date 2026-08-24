@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from "@/pages/forgot-password-page"
 import { ResetPasswordPage } from "@/pages/reset-password-page"
 import { DashboardPage } from "@/pages/dashboard-page"
 import { UsuariosPage } from "@/pages/usuarios-page"
+import { EmpleadosPage } from "@/pages/empleados-page"
 
 function App() {
   return (
@@ -21,6 +22,9 @@ function App() {
           </Route>
           <Route element={<ProtectedRoute allowedRoles={["ADMIN_RRHH"]} />}>
             <Route path="/usuarios" element={<UsuariosPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={["ADMIN_RRHH", "SUPERVISOR"]} />}>
+            <Route path="/empleados" element={<EmpleadosPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

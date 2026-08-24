@@ -30,7 +30,6 @@ import { useAuth } from "@/hooks/use-auth"
 
 const modulos = [
   { titulo: "Reclutamiento (ATS)", icon: Briefcase },
-  { titulo: "Expediente Digital", icon: IdCard },
   { titulo: "Asistencia y Tiempo", icon: CalendarClock },
   { titulo: "Nomina", icon: Wallet },
   { titulo: "Desempeno y KPIs", icon: ClipboardCheck },
@@ -73,6 +72,18 @@ export function AppSidebar() {
                   <span>Inicio</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {(user?.rol === "ADMIN_RRHH" || user?.rol === "SUPERVISOR") && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location.pathname === "/empleados"}
+                    tooltip="Expediente Digital"
+                    render={<Link to="/empleados" />}
+                  >
+                    <IdCard />
+                    <span>Empleados</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {user?.rol === "ADMIN_RRHH" && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
