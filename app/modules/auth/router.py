@@ -9,7 +9,9 @@ from app.core.security import get_current_user, require_role
 from app.modules.auth.models import RolEnum, Usuario
 from app.modules.auth.schemas import (
     CambiarPasswordRequest,
+    ForgotPasswordRequest,
     RefreshTokenRequest,
+    ResetPasswordRequest,
     Token,
     UsuarioCreate,
     UsuarioOut,
@@ -30,6 +32,16 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 @auth_router.post("/refresh", response_model=Token)
 def refresh(body: RefreshTokenRequest, db: Session = Depends(get_db)) -> Token:
     return AuthService(db).refresh(body.refresh_token)
+
+
+@auth_router.post("/forgot-password", status_code=status.HTTP_204_NO_CONTENT)
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)) -> None:
+    AuthService(db).forgot_password(body.email)
+
+
+@auth_router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)) -> None:
+    AuthService(db).reset_password(body.token, body.password_nuevo)
 
 
 @auth_router.get("/me", response_model=UsuarioOut)

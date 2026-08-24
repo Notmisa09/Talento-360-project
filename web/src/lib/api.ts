@@ -1,4 +1,5 @@
-import type { Token, UsuarioOut } from "@/lib/types"
+import { authStorage } from "@/lib/auth-storage"
+import type { PaginatedResponse, Token, UsuarioCreate, UsuarioOut, UsuarioUpdate } from "@/lib/types"
 
 const API_BASE = "/api/v1"
 
@@ -60,6 +61,76 @@ export async function me(accessToken: string): Promise<UsuarioOut> {
   }
 
   return res.json()
+}
+
+async function authorizedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = authStorage.getAccessToken()
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  })
+
+  if (!res.ok) {
+    const err = await parseErrorBody(res)
+    throw new ApiError(detailToMessage(err.detail, "Ocurrio un error inesperado"), res.status, err.code)
+  }
+
+  if (res.status === 204) {
+    return undefined as T
+  }
+
+  return res.json()
+}
+
+export async function listarUsuarios(page: number, size = 20): Promise<PaginatedResponse<UsuarioOut>> {
+  return authorizedRequest(`/usuarios?page=${page}&size=${size}`)
+}
+
+export async function crearUsuario(data: UsuarioCreate): Promise<UsuarioOut> {
+  return authorizedRequest("/usuarios", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function actualizarUsuario(usuarioId: string, data: UsuarioUpdate): Promise<UsuarioOut> {
+  return authorizedRequest(`/usuarios/${usuarioId}`, { method: "PATCH", body: JSON.stringify(data) })
+}
+
+export async function desactivarUsuario(usuarioId: string): Promise<void> {
+  return authorizedRequest(`/usuarios/${usuarioId}`, { method: "DELETE" })
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  })
+
+  if (!res.ok) {
+    const err = await parseErrorBody(res)
+    throw new ApiError(detailToMessage(err.detail, "No se pudo procesar la solicitud"), res.status, err.code)
+  }
+}
+
+export async function resetPassword(token: string, passwordNuevo: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password_nuevo: passwordNuevo }),
+  })
+
+  if (!res.ok) {
+    const err = await parseErrorBody(res)
+    throw new ApiError(
+      detailToMessage(err.detail, "No se pudo restablecer la contrasena"),
+      res.status,
+      err.code
+    )
+  }
 }
 
 export async function refresh(refreshToken: string): Promise<Token> {

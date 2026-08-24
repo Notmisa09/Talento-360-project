@@ -1,8 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
+import type { RolEnum } from "@/lib/types"
 
-export function ProtectedRoute() {
-  const { status } = useAuth()
+export function ProtectedRoute({ allowedRoles }: { allowedRoles?: RolEnum[] }) {
+  const { status, user } = useAuth()
 
   if (status === "loading") {
     return (
@@ -14,6 +15,10 @@ export function ProtectedRoute() {
 
   if (status === "unauthenticated") {
     return <Navigate to="/login" replace />
+  }
+
+  if (allowedRoles && user && !allowedRoles.includes(user.rol)) {
+    return <Navigate to="/" replace />
   }
 
   return <Outlet />

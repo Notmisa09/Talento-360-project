@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { Navigate, useLocation, useNavigate } from "react-router-dom"
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom"
 import { Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -84,7 +84,15 @@ export function LoginPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Contrasena</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Contrasena</Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Olvidaste tu contrasena?
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   type="password"

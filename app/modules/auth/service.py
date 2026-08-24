@@ -3,14 +3,21 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.core.email import send_email
 from app.core.security import (
     TOKEN_TYPE_REFRESH,
+    TOKEN_TYPE_RESET,
     create_access_token,
+    create_password_reset_token,
     create_refresh_token,
     decode_token,
     hash_password,
+    password_fingerprint,
     verify_password,
 )
+from app.core.security import TokenInvalidoError
+from app.modules.auth.emails import build_reset_password_email
 from app.modules.auth.exceptions import (
     CredencialesInvalidasError,
     EmailYaRegistradoError,
@@ -46,6 +53,35 @@ class AuthService:
         if usuario is None or not usuario.activo:
             raise CredencialesInvalidasError()
         return self._issue_tokens(usuario)
+
+    def forgot_password(self, email: str) -> None:
+        # Siempre responde igual exista o no el usuario, para no filtrar que emails estan registrados.
+        usuario = self.repo.get_by_email(email)
+        if usuario is None or not usuario.activo:
+            return
+
+        token = create_password_reset_token(usuario.id, usuario.password_hash)
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+        html, text = build_reset_password_email(usuario.email, reset_url, settings.RESET_TOKEN_EXPIRE_MINUTES)
+        send_email(usuario.email, "Restablecer tu contrasena - Talento360-HR", html, text)
+
+    def reset_password(self, token: str, password_nuevo: str) -> None:
+        payload = decode_token(token, TOKEN_TYPE_RESET)
+
+        try:
+            usuario_id = UUID(payload["sub"])
+        except (KeyError, ValueError) as exc:
+            raise TokenInvalidoError() from exc
+
+        usuario = self.repo.get_by_id(usuario_id)
+        if usuario is None or not usuario.activo:
+            raise TokenInvalidoError()
+
+        if payload.get("pwdfp") != password_fingerprint(usuario.password_hash):
+            raise TokenInvalidoError("El enlace ya fue utilizado o ya no es valido")
+
+        usuario.password_hash = hash_password(password_nuevo)
+        self.repo.save(usuario)
 
 
 class UsuarioService:

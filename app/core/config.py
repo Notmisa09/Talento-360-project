@@ -23,6 +23,18 @@ class Settings(BaseSettings):
     # CORS - origenes permitidos para el frontend (Vite dev server por defecto)
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+    # URL publica del frontend, usada para construir el link de "olvide mi contrasena"
+    FRONTEND_URL: str = "http://localhost:5173"
+    RESET_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # SMTP - envio del correo de recuperacion de contrasena. Por defecto Gmail;
+    # con SMTP_USER/SMTP_PASSWORD vacios, el correo se imprime en consola en vez de enviarse.
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "Talento360-HR <no-reply@talento360.com>"
+
 
 @lru_cache
 def get_settings() -> Settings:

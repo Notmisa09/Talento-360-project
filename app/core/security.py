@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
@@ -16,6 +17,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/lo
 
 TOKEN_TYPE_ACCESS = "access"
 TOKEN_TYPE_REFRESH = "refresh"
+TOKEN_TYPE_RESET = "reset"
 
 # bcrypt trunca/rechaza secretos de mas de 72 bytes; los schemas Pydantic ya
 # limitan la contrasena a ese largo, esto es solo una salvaguarda defensiva.
@@ -57,6 +59,24 @@ def create_refresh_token(usuario_id: UUID, rol: str) -> str:
     return _create_token(
         str(usuario_id), rol, timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS), TOKEN_TYPE_REFRESH
     )
+
+
+def password_fingerprint(password_hash: str) -> str:
+    """Huella corta del hash de contrasena actual, usada para invalidar tokens de
+    reseteo automaticamente una vez usados (o si la contrasena cambio mientras tanto)."""
+    return hashlib.sha256(password_hash.encode("utf-8")).hexdigest()[:16]
+
+
+def create_password_reset_token(usuario_id: UUID, password_hash: str) -> str:
+    now = datetime.now(timezone.utc)
+    payload: dict[str, Any] = {
+        "sub": str(usuario_id),
+        "pwdfp": password_fingerprint(password_hash),
+        "type": TOKEN_TYPE_RESET,
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.RESET_TOKEN_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 class TokenInvalidoError(AppException):

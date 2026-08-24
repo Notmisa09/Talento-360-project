@@ -1,3 +1,4 @@
+import { Link, useLocation } from "react-router-dom"
 import {
   Briefcase,
   Building2,
@@ -43,6 +44,7 @@ function initialsFromEmail(email: string) {
 
 export function AppSidebar() {
   const { user, logout } = useAuth()
+  const location = useLocation()
 
   return (
     <Sidebar collapsible="icon">
@@ -62,14 +64,22 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive tooltip="Inicio">
+                <SidebarMenuButton
+                  isActive={location.pathname === "/"}
+                  tooltip="Inicio"
+                  render={<Link to="/" />}
+                >
                   <LayoutDashboard />
                   <span>Inicio</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {user?.rol === "ADMIN_RRHH" && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Usuarios">
+                  <SidebarMenuButton
+                    isActive={location.pathname === "/usuarios"}
+                    tooltip="Usuarios"
+                    render={<Link to="/usuarios" />}
+                  >
                     <Users />
                     <span>Usuarios</span>
                   </SidebarMenuButton>
