@@ -1,6 +1,8 @@
 import { authStorage } from "@/lib/auth-storage"
 import type {
   CandidatoOut,
+  CicloEvaluacionCreate,
+  CicloEvaluacionOut,
   ContratarPostulacionRequest,
   ContratoCreate,
   ContratoOut,
@@ -13,7 +15,12 @@ import type {
   EmpleadoUpdate,
   EntrevistaCreate,
   EntrevistaOut,
+  EvaluacionCreate,
+  EvaluacionOut,
   ExpedienteOut,
+  HistorialDesempenoOut,
+  ObjetivoCreate,
+  ObjetivoOut,
   PaginatedResponse,
   PostulacionOut,
   PuestoCreate,
@@ -349,6 +356,41 @@ export async function contratarPostulacion(
     method: "POST",
     body: JSON.stringify(data),
   })
+}
+
+export async function listarCiclosEvaluacion(): Promise<CicloEvaluacionOut[]> {
+  return authorizedRequest("/ciclos-evaluacion")
+}
+
+export async function crearCicloEvaluacion(data: CicloEvaluacionCreate): Promise<CicloEvaluacionOut> {
+  return authorizedRequest("/ciclos-evaluacion", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function listarObjetivos(empleadoId: string): Promise<ObjetivoOut[]> {
+  return authorizedRequest(`/objetivos?empleado_id=${empleadoId}`)
+}
+
+export async function crearObjetivo(data: ObjetivoCreate): Promise<ObjetivoOut> {
+  return authorizedRequest("/objetivos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function actualizarAvanceObjetivo(objetivoId: string, valorActual: number): Promise<ObjetivoOut> {
+  return authorizedRequest(`/objetivos/${objetivoId}/avance`, {
+    method: "PATCH",
+    body: JSON.stringify({ valor_actual: valorActual }),
+  })
+}
+
+export async function listarEvaluaciones(empleadoId: string): Promise<EvaluacionOut[]> {
+  return authorizedRequest(`/evaluaciones?empleado_id=${empleadoId}`)
+}
+
+export async function crearEvaluacion(data: EvaluacionCreate): Promise<EvaluacionOut> {
+  return authorizedRequest("/evaluaciones", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function obtenerHistorialDesempeno(empleadoId: string): Promise<HistorialDesempenoOut> {
+  return authorizedRequest(`/desempeno/empleados/${empleadoId}/historial-desempeno`)
 }
 
 export async function refresh(refreshToken: string): Promise<Token> {

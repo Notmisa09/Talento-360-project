@@ -531,7 +531,7 @@ function PostulacionesSheet({
     setLoading(true)
     setError(null)
     try {
-      const [posts, cands] = await Promise.all([listarPostulacionesDeVacante(vacanteId), listarCandidatos(1, 200)])
+      const [posts, cands] = await Promise.all([listarPostulacionesDeVacante(vacanteId), listarCandidatos(1, 100)])
       setPostulaciones(posts)
       setCandidatos(cands.items)
     } catch (err) {

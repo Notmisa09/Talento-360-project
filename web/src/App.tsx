@@ -9,6 +9,7 @@ import { DashboardPage } from "@/pages/dashboard-page"
 import { UsuariosPage } from "@/pages/usuarios-page"
 import { EmpleadosPage } from "@/pages/empleados-page"
 import { ReclutamientoPage } from "@/pages/reclutamiento-page"
+import { DesempenoPage } from "@/pages/desempeno-page"
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={["ADMIN_RRHH", "SUPERVISOR"]} />}>
             <Route path="/empleados" element={<EmpleadosPage />} />
             <Route path="/reclutamiento" element={<ReclutamientoPage />} />
+            <Route path="/desempeno" element={<DesempenoPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

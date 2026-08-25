@@ -12,6 +12,7 @@ from app.shared.models import Base
 from app.modules.auth import models as auth_models  # noqa: F401
 from app.modules.empleados import models as empleados_models  # noqa: F401
 from app.modules.reclutamiento import models as reclutamiento_models  # noqa: F401
+from app.modules.desempeno import models as desempeno_models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

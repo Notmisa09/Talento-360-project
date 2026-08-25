@@ -245,3 +245,59 @@ export interface ContratarPostulacionRequest {
   tipo_contrato: TipoContratoEnum
   salario: number
 }
+
+export interface CicloEvaluacionOut {
+  id: string
+  nombre: string
+  fecha_inicio: string
+  fecha_fin: string
+}
+
+export interface CicloEvaluacionCreate {
+  nombre: string
+  fecha_inicio: string
+  fecha_fin: string
+}
+
+export interface ObjetivoOut {
+  id: string
+  empleado_id: string
+  ciclo_id: string
+  descripcion: string
+  meta_valor: number
+  valor_actual: number
+  progreso: number
+  creado_en: string
+}
+
+export interface ObjetivoCreate {
+  empleado_id: string
+  ciclo_id: string
+  descripcion: string
+  meta_valor: number
+}
+
+export interface EvaluacionOut {
+  id: string
+  empleado_id: string
+  evaluador_id: string
+  ciclo_id: string
+  calificacion_final: number
+  comentarios: string | null
+  plan_mejora: string | null
+  creado_en: string
+}
+
+export interface EvaluacionCreate {
+  empleado_id: string
+  evaluador_id: string
+  ciclo_id: string
+  calificacion_final: number
+  comentarios?: string | null
+  plan_mejora?: string | null
+}
+
+export interface HistorialDesempenoOut {
+  objetivos: ObjetivoOut[]
+  evaluaciones: EvaluacionOut[]
+}

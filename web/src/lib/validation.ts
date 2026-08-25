@@ -88,6 +88,29 @@ export function validarLongitudMaxima(valor: string, max: number, campo = "Este 
   return valor.length > max ? `${campo} no puede superar ${max} caracteres` : null
 }
 
+export function validarNoNegativo(valor: string, campo = "El valor"): string | null {
+  if (!valor.trim()) return `${campo} es requerido`
+  const n = Number(valor)
+  if (Number.isNaN(n)) return `${campo} debe ser un numero valido`
+  if (n < 0) return `${campo} no puede ser negativo`
+  return null
+}
+
+export function validarRangoNumerico(valor: string, min: number, max: number, campo = "El valor"): string | null {
+  if (!valor.trim()) return `${campo} es requerido`
+  const n = Number(valor)
+  if (Number.isNaN(n)) return `${campo} debe ser un numero valido`
+  if (n < min || n > max) return `${campo} debe estar entre ${min} y ${max}`
+  return null
+}
+
+export function validarRangoFechasObligatorio(inicio: string, fin: string): string | null {
+  if (!inicio) return "La fecha de inicio es requerida"
+  if (!fin) return "La fecha de fin es requerida"
+  if (new Date(fin) < new Date(inicio)) return "La fecha de fin no puede ser anterior al inicio"
+  return null
+}
+
 export function validarSeleccion(valor: string, campo = "Este campo"): string | null {
   return valor ? null : `Selecciona ${campo}`
 }

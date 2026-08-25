@@ -31,7 +31,6 @@ import { useAuth } from "@/hooks/use-auth"
 const modulos = [
   { titulo: "Asistencia y Tiempo", icon: CalendarClock },
   { titulo: "Nomina", icon: Wallet },
-  { titulo: "Desempeno y KPIs", icon: ClipboardCheck },
   { titulo: "Capacitacion (LMS)", icon: GraduationCap },
   { titulo: "Autoservicio (ESS)", icon: UserCircle2 },
 ]
@@ -91,6 +90,16 @@ export function AppSidebar() {
                     >
                       <Briefcase />
                       <span>Reclutamiento</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location.pathname === "/desempeno"}
+                      tooltip="Desempeno y KPIs"
+                      render={<Link to="/desempeno" />}
+                    >
+                      <ClipboardCheck />
+                      <span>Desempeno</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
