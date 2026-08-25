@@ -4,6 +4,8 @@ import type {
   ContratarPostulacionRequest,
   ContratoCreate,
   ContratoOut,
+  DatosLegalesOut,
+  DatosLegalesUpsert,
   DepartamentoCreate,
   DepartamentoOut,
   EmpleadoCreate,
@@ -214,6 +216,10 @@ export async function cambiarEstadoEmpleado(empleadoId: string, estado: string):
 
 export async function obtenerExpediente(empleadoId: string): Promise<ExpedienteOut> {
   return authorizedRequest(`/empleados/${empleadoId}/expediente`)
+}
+
+export async function guardarDatosLegales(empleadoId: string, data: DatosLegalesUpsert): Promise<DatosLegalesOut> {
+  return authorizedRequest(`/empleados/${empleadoId}/datos-legales`, { method: "PUT", body: JSON.stringify(data) })
 }
 
 export async function crearContrato(empleadoId: string, data: ContratoCreate): Promise<ContratoOut> {

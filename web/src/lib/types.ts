@@ -155,6 +155,12 @@ export interface DatosLegalesOut {
   informacion_emergencia: string | null
 }
 
+export interface DatosLegalesUpsert {
+  numero_seguridad_social?: string | null
+  beneficiarios?: string | null
+  informacion_emergencia?: string | null
+}
+
 export interface ExpedienteOut {
   empleado: EmpleadoOut
   contratos: ContratoOut[]

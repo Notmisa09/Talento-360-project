@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   ApiError,
+  actualizarEmpleado,
   cambiarEstadoEmpleado,
   cargarDocumento,
   crearContrato,
@@ -55,6 +56,7 @@ import {
   crearPuesto,
   crearSucursal,
   descargarDocumento,
+  guardarDatosLegales,
   listarDepartamentos,
   listarEmpleados,
   listarPuestos,
@@ -62,6 +64,7 @@ import {
   obtenerExpediente,
 } from "@/lib/api"
 import type {
+  DatosLegalesOut,
   DepartamentoOut,
   EmpleadoOut,
   EstadoEmpleadoEnum,
@@ -71,6 +74,20 @@ import type {
   TipoContratoEnum,
   TipoDocumentoEnum,
 } from "@/lib/types"
+import {
+  recolectarErrores,
+  validarArchivo,
+  validarCedula,
+  validarFechaIngreso,
+  validarFechaNacimiento,
+  validarLongitudMaxima,
+  validarMonto,
+  validarNombre,
+  validarRangoFechas,
+  validarRequerido,
+  validarSeleccion,
+  validarTelefono,
+} from "@/lib/validation"
 
 const PAGE_SIZE = 10
 
@@ -114,6 +131,7 @@ export function EmpleadosPage() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [expedienteId, setExpedienteId] = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<EmpleadoOut | null>(null)
 
   const sucursalesMap = useMemo(() => new Map(sucursales.map((s) => [s.id, s.nombre])), [sucursales])
   const departamentosMap = useMemo(() => new Map(departamentos.map((d) => [d.id, d.nombre])), [departamentos])
@@ -312,6 +330,7 @@ export function EmpleadosPage() {
                           <DropdownMenuItem onClick={() => setExpedienteId(empleado.id)}>
                             Ver expediente
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEditTarget(empleado)}>Editar</DropdownMenuItem>
                           {empleado.estado === "ACTIVO" ? (
                             <DropdownMenuItem
                               variant="destructive"
@@ -370,6 +389,21 @@ export function EmpleadosPage() {
         puestosMap={puestosMap}
         sucursalesMap={sucursalesMap}
       />
+
+      <EditarEmpleadoDialog
+        empleado={editTarget}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null)
+        }}
+        sucursales={sucursales}
+        departamentos={departamentos}
+        puestos={puestos}
+        onActualizado={(actualizado) => {
+          setEmpleados((prev) => prev.map((e) => (e.id === actualizado.id ? actualizado : e)))
+          toast.success(`${actualizado.nombres} ${actualizado.apellidos} actualizado`)
+          setEditTarget(null)
+        }}
+      />
     </AppLayout>
   )
 }
@@ -390,11 +424,15 @@ function QuickAddSucursal({ onCreated }: { onCreated: (s: SucursalOut) => void }
   }
 
   async function handleCrear() {
-    if (!nombre.trim()) return
+    const validacion = validarNombre(nombre, "El nombre de la sucursal")
+    if (validacion) {
+      setError(validacion)
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
-      const nueva = await crearSucursal({ nombre, ciudad: ciudad || null })
+      const nueva = await crearSucursal({ nombre: nombre.trim(), ciudad: ciudad.trim() || null })
       onCreated(nueva)
       setOpen(false)
       setNombre("")
@@ -438,11 +476,15 @@ function QuickAddDepartamento({ onCreated }: { onCreated: (d: DepartamentoOut) =
   }
 
   async function handleCrear() {
-    if (!nombre.trim()) return
+    const validacion = validarNombre(nombre, "El nombre del departamento")
+    if (validacion) {
+      setError(validacion)
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
-      const nuevo = await crearDepartamento({ nombre })
+      const nuevo = await crearDepartamento({ nombre: nombre.trim() })
       onCreated(nuevo)
       setOpen(false)
       setNombre("")
@@ -496,11 +538,20 @@ function QuickAddPuesto({
   }
 
   async function handleCrear() {
-    if (!titulo.trim() || !salario) return
+    const errorTitulo = validarNombre(titulo, "El titulo del puesto")
+    const errorSalario = validarMonto(salario, "El salario base")
+    if (errorTitulo || errorSalario) {
+      setError(errorTitulo ?? errorSalario)
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
-      const nuevo = await crearPuesto({ titulo, salario_base: Number(salario), departamento_id: departamentoId })
+      const nuevo = await crearPuesto({
+        titulo: titulo.trim(),
+        salario_base: Number(salario),
+        departamento_id: departamentoId,
+      })
       onCreated(nuevo)
       setOpen(false)
       setTitulo("")
@@ -569,6 +620,7 @@ function CrearEmpleadoDialog({
   const [puestoId, setPuestoId] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errores, setErrores] = useState<Record<string, string>>({})
 
   const puestosDelDepartamento = departamentoId
     ? puestos.filter((p) => p.departamento_id === departamentoId)
@@ -586,21 +638,53 @@ function CrearEmpleadoDialog({
     setDepartamentoId("")
     setPuestoId("")
     setError(null)
+    setErrores({})
+  }
+
+  function validarTodo(): Record<string, string> {
+    return recolectarErrores({
+      nombres: validarNombre(nombres, "Los nombres"),
+      apellidos: validarNombre(apellidos, "Los apellidos"),
+      cedula: validarCedula(cedula),
+      fechaNacimiento: validarFechaNacimiento(fechaNacimiento),
+      fechaIngreso: validarFechaIngreso(fechaIngreso, fechaNacimiento),
+      telefono: validarTelefono(telefono),
+      direccion: validarLongitudMaxima(direccion, 255, "La direccion"),
+      sucursalId: validarSeleccion(sucursalId, "una sucursal"),
+      departamentoId: validarSeleccion(departamentoId, "un departamento"),
+      puestoId: validarSeleccion(puestoId, "un puesto"),
+    })
+  }
+
+  function validarCampo(campo: string, mensaje: string | null) {
+    setErrores((prev) => {
+      const siguiente = { ...prev }
+      if (mensaje) {
+        siguiente[campo] = mensaje
+      } else {
+        delete siguiente[campo]
+      }
+      return siguiente
+    })
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
+    const nuevosErrores = validarTodo()
+    setErrores(nuevosErrores)
+    if (Object.keys(nuevosErrores).length > 0) return
+
     setSubmitting(true)
     try {
       const nuevo = await crearEmpleado({
-        nombres,
-        apellidos,
-        cedula_o_dni: cedula,
+        nombres: nombres.trim(),
+        apellidos: apellidos.trim(),
+        cedula_o_dni: cedula.trim(),
         fecha_nacimiento: fechaNacimiento,
         fecha_ingreso: fechaIngreso,
-        telefono: telefono || null,
-        direccion: direccion || null,
+        telefono: telefono.trim() || null,
+        direccion: direccion.trim() || null,
         sucursal_id: sucursalId,
         departamento_id: departamentoId,
         puesto_id: puestoId,
@@ -643,17 +727,38 @@ function CrearEmpleadoDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
               <Label htmlFor="emp-nombres">Nombres</Label>
-              <Input id="emp-nombres" value={nombres} onChange={(e) => setNombres(e.target.value)} required />
+              <Input
+                id="emp-nombres"
+                value={nombres}
+                onChange={(e) => setNombres(e.target.value)}
+                onBlur={() => validarCampo("nombres", validarNombre(nombres, "Los nombres"))}
+                aria-invalid={!!errores.nombres}
+              />
+              {errores.nombres && <p className="text-xs text-destructive">{errores.nombres}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="emp-apellidos">Apellidos</Label>
-              <Input id="emp-apellidos" value={apellidos} onChange={(e) => setApellidos(e.target.value)} required />
+              <Input
+                id="emp-apellidos"
+                value={apellidos}
+                onChange={(e) => setApellidos(e.target.value)}
+                onBlur={() => validarCampo("apellidos", validarNombre(apellidos, "Los apellidos"))}
+                aria-invalid={!!errores.apellidos}
+              />
+              {errores.apellidos && <p className="text-xs text-destructive">{errores.apellidos}</p>}
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="emp-cedula">Cedula / DNI</Label>
-            <Input id="emp-cedula" value={cedula} onChange={(e) => setCedula(e.target.value)} required />
+            <Input
+              id="emp-cedula"
+              value={cedula}
+              onChange={(e) => setCedula(e.target.value)}
+              onBlur={() => validarCampo("cedula", validarCedula(cedula))}
+              aria-invalid={!!errores.cedula}
+            />
+            {errores.cedula && <p className="text-xs text-destructive">{errores.cedula}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -664,8 +769,10 @@ function CrearEmpleadoDialog({
                 type="date"
                 value={fechaNacimiento}
                 onChange={(e) => setFechaNacimiento(e.target.value)}
-                required
+                onBlur={() => validarCampo("fechaNacimiento", validarFechaNacimiento(fechaNacimiento))}
+                aria-invalid={!!errores.fechaNacimiento}
               />
+              {errores.fechaNacimiento && <p className="text-xs text-destructive">{errores.fechaNacimiento}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="emp-ingreso">Fecha de ingreso</Label>
@@ -674,19 +781,35 @@ function CrearEmpleadoDialog({
                 type="date"
                 value={fechaIngreso}
                 onChange={(e) => setFechaIngreso(e.target.value)}
-                required
+                onBlur={() => validarCampo("fechaIngreso", validarFechaIngreso(fechaIngreso, fechaNacimiento))}
+                aria-invalid={!!errores.fechaIngreso}
               />
+              {errores.fechaIngreso && <p className="text-xs text-destructive">{errores.fechaIngreso}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
               <Label htmlFor="emp-telefono">Telefono</Label>
-              <Input id="emp-telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+              <Input
+                id="emp-telefono"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                onBlur={() => validarCampo("telefono", validarTelefono(telefono))}
+                aria-invalid={!!errores.telefono}
+              />
+              {errores.telefono && <p className="text-xs text-destructive">{errores.telefono}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="emp-direccion">Direccion</Label>
-              <Input id="emp-direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+              <Input
+                id="emp-direccion"
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+                onBlur={() => validarCampo("direccion", validarLongitudMaxima(direccion, 255, "La direccion"))}
+                aria-invalid={!!errores.direccion}
+              />
+              {errores.direccion && <p className="text-xs text-destructive">{errores.direccion}</p>}
             </div>
           </div>
 
@@ -694,8 +817,14 @@ function CrearEmpleadoDialog({
 
           <div className="flex flex-col gap-2">
             <Label>Sucursal</Label>
-            <Select value={sucursalId} onValueChange={(v) => setSucursalId(v ?? "")}>
-              <SelectTrigger className="w-full">
+            <Select
+              value={sucursalId}
+              onValueChange={(v) => {
+                setSucursalId(v ?? "")
+                validarCampo("sucursalId", validarSeleccion(v ?? "", "una sucursal"))
+              }}
+            >
+              <SelectTrigger className="w-full" aria-invalid={!!errores.sucursalId}>
                 <SelectValue>
                   {(v: string | null) =>
                     v ? (sucursales.find((s) => s.id === v)?.nombre ?? v) : "Selecciona una sucursal"
@@ -710,10 +839,12 @@ function CrearEmpleadoDialog({
                 ))}
               </SelectContent>
             </Select>
+            {errores.sucursalId && <p className="text-xs text-destructive">{errores.sucursalId}</p>}
             <QuickAddSucursal
               onCreated={(s) => {
                 onSucursalCreada(s)
                 setSucursalId(s.id)
+                validarCampo("sucursalId", null)
               }}
             />
           </div>
@@ -725,9 +856,10 @@ function CrearEmpleadoDialog({
               onValueChange={(value) => {
                 setDepartamentoId(value ?? "")
                 setPuestoId("")
+                validarCampo("departamentoId", validarSeleccion(value ?? "", "un departamento"))
               }}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full" aria-invalid={!!errores.departamentoId}>
                 <SelectValue>
                   {(v: string | null) =>
                     v ? (departamentos.find((d) => d.id === v)?.nombre ?? v) : "Selecciona un departamento"
@@ -742,19 +874,27 @@ function CrearEmpleadoDialog({
                 ))}
               </SelectContent>
             </Select>
+            {errores.departamentoId && <p className="text-xs text-destructive">{errores.departamentoId}</p>}
             <QuickAddDepartamento
               onCreated={(d) => {
                 onDepartamentoCreado(d)
                 setDepartamentoId(d.id)
                 setPuestoId("")
+                validarCampo("departamentoId", null)
               }}
             />
           </div>
 
           <div className="flex flex-col gap-2">
             <Label>Puesto</Label>
-            <Select value={puestoId} onValueChange={(v) => setPuestoId(v ?? "")}>
-              <SelectTrigger className="w-full" disabled={!departamentoId}>
+            <Select
+              value={puestoId}
+              onValueChange={(v) => {
+                setPuestoId(v ?? "")
+                validarCampo("puestoId", validarSeleccion(v ?? "", "un puesto"))
+              }}
+            >
+              <SelectTrigger className="w-full" disabled={!departamentoId} aria-invalid={!!errores.puestoId}>
                 <SelectValue>
                   {(v: string | null) =>
                     v
@@ -773,18 +913,273 @@ function CrearEmpleadoDialog({
                 ))}
               </SelectContent>
             </Select>
+            {errores.puestoId && <p className="text-xs text-destructive">{errores.puestoId}</p>}
             <QuickAddPuesto
               departamentoId={departamentoId}
               onCreated={(p) => {
                 onPuestoCreado(p)
                 setPuestoId(p.id)
+                validarCampo("puestoId", null)
               }}
             />
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={submitting || !sucursalId || !departamentoId || !puestoId}>
+            <Button type="submit" disabled={submitting}>
               {submitting ? "Registrando..." : "Registrar empleado"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function EditarEmpleadoDialog({
+  empleado,
+  onOpenChange,
+  sucursales,
+  departamentos,
+  puestos,
+  onActualizado,
+}: {
+  empleado: EmpleadoOut | null
+  onOpenChange: (open: boolean) => void
+  sucursales: SucursalOut[]
+  departamentos: DepartamentoOut[]
+  puestos: PuestoOut[]
+  onActualizado: (empleado: EmpleadoOut) => void
+}) {
+  const [nombres, setNombres] = useState("")
+  const [apellidos, setApellidos] = useState("")
+  const [telefono, setTelefono] = useState("")
+  const [direccion, setDireccion] = useState("")
+  const [sucursalId, setSucursalId] = useState("")
+  const [departamentoId, setDepartamentoId] = useState("")
+  const [puestoId, setPuestoId] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [errores, setErrores] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (empleado) {
+      setNombres(empleado.nombres)
+      setApellidos(empleado.apellidos)
+      setTelefono(empleado.telefono ?? "")
+      setDireccion(empleado.direccion ?? "")
+      setSucursalId(empleado.sucursal_id)
+      setDepartamentoId(empleado.departamento_id)
+      setPuestoId(empleado.puesto_id)
+      setError(null)
+      setErrores({})
+    }
+  }, [empleado])
+
+  const puestosDelDepartamento = departamentoId
+    ? puestos.filter((p) => p.departamento_id === departamentoId)
+    : []
+
+  function validarCampo(campo: string, mensaje: string | null) {
+    setErrores((prev) => {
+      const siguiente = { ...prev }
+      if (mensaje) {
+        siguiente[campo] = mensaje
+      } else {
+        delete siguiente[campo]
+      }
+      return siguiente
+    })
+  }
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!empleado) return
+    setError(null)
+
+    const nuevosErrores = recolectarErrores({
+      nombres: validarNombre(nombres, "Los nombres"),
+      apellidos: validarNombre(apellidos, "Los apellidos"),
+      telefono: validarTelefono(telefono),
+      direccion: validarLongitudMaxima(direccion, 255, "La direccion"),
+      sucursalId: validarSeleccion(sucursalId, "una sucursal"),
+      departamentoId: validarSeleccion(departamentoId, "un departamento"),
+      puestoId: validarSeleccion(puestoId, "un puesto"),
+    })
+    setErrores(nuevosErrores)
+    if (Object.keys(nuevosErrores).length > 0) return
+
+    setSubmitting(true)
+    try {
+      const actualizado = await actualizarEmpleado(empleado.id, {
+        nombres: nombres.trim(),
+        apellidos: apellidos.trim(),
+        telefono: telefono.trim() || null,
+        direccion: direccion.trim() || null,
+        sucursal_id: sucursalId,
+        departamento_id: departamentoId,
+        puesto_id: puestoId,
+      })
+      onActualizado(actualizado)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo actualizar el empleado")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={empleado !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Editar empleado</DialogTitle>
+          <DialogDescription>
+            {empleado ? `${empleado.codigo_empleado} - ${empleado.cedula_o_dni}` : ""}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>No se pudo actualizar</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-nombres">Nombres</Label>
+              <Input
+                id="edit-nombres"
+                value={nombres}
+                onChange={(e) => setNombres(e.target.value)}
+                onBlur={() => validarCampo("nombres", validarNombre(nombres, "Los nombres"))}
+                aria-invalid={!!errores.nombres}
+              />
+              {errores.nombres && <p className="text-xs text-destructive">{errores.nombres}</p>}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-apellidos">Apellidos</Label>
+              <Input
+                id="edit-apellidos"
+                value={apellidos}
+                onChange={(e) => setApellidos(e.target.value)}
+                onBlur={() => validarCampo("apellidos", validarNombre(apellidos, "Los apellidos"))}
+                aria-invalid={!!errores.apellidos}
+              />
+              {errores.apellidos && <p className="text-xs text-destructive">{errores.apellidos}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-telefono">Telefono</Label>
+              <Input
+                id="edit-telefono"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                onBlur={() => validarCampo("telefono", validarTelefono(telefono))}
+                aria-invalid={!!errores.telefono}
+              />
+              {errores.telefono && <p className="text-xs text-destructive">{errores.telefono}</p>}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-direccion">Direccion</Label>
+              <Input
+                id="edit-direccion"
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+                onBlur={() => validarCampo("direccion", validarLongitudMaxima(direccion, 255, "La direccion"))}
+                aria-invalid={!!errores.direccion}
+              />
+              {errores.direccion && <p className="text-xs text-destructive">{errores.direccion}</p>}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="flex flex-col gap-2">
+            <Label>Sucursal</Label>
+            <Select
+              value={sucursalId}
+              onValueChange={(v) => {
+                setSucursalId(v ?? "")
+                validarCampo("sucursalId", validarSeleccion(v ?? "", "una sucursal"))
+              }}
+            >
+              <SelectTrigger className="w-full" aria-invalid={!!errores.sucursalId}>
+                <SelectValue>
+                  {(v: string | null) => (v ? (sucursales.find((s) => s.id === v)?.nombre ?? v) : "Selecciona una sucursal")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {sucursales.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errores.sucursalId && <p className="text-xs text-destructive">{errores.sucursalId}</p>}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Departamento</Label>
+            <Select
+              value={departamentoId}
+              onValueChange={(value) => {
+                setDepartamentoId(value ?? "")
+                if (!puestosDelDepartamento.some((p) => p.departamento_id === value)) setPuestoId("")
+                validarCampo("departamentoId", validarSeleccion(value ?? "", "un departamento"))
+              }}
+            >
+              <SelectTrigger className="w-full" aria-invalid={!!errores.departamentoId}>
+                <SelectValue>
+                  {(v: string | null) =>
+                    v ? (departamentos.find((d) => d.id === v)?.nombre ?? v) : "Selecciona un departamento"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {departamentos.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errores.departamentoId && <p className="text-xs text-destructive">{errores.departamentoId}</p>}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Puesto</Label>
+            <Select
+              value={puestoId}
+              onValueChange={(v) => {
+                setPuestoId(v ?? "")
+                validarCampo("puestoId", validarSeleccion(v ?? "", "un puesto"))
+              }}
+            >
+              <SelectTrigger className="w-full" disabled={!departamentoId} aria-invalid={!!errores.puestoId}>
+                <SelectValue>
+                  {(v: string | null) =>
+                    v ? (puestosDelDepartamento.find((p) => p.id === v)?.titulo ?? v) : "Selecciona un puesto"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {puestosDelDepartamento.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.titulo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errores.puestoId && <p className="text-xs text-destructive">{errores.puestoId}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Guardando..." : "Guardar cambios"}
             </Button>
           </DialogFooter>
         </form>
@@ -892,6 +1287,14 @@ function ExpedienteSheet({
                   setExpediente((prev) => (prev ? { ...prev, documentos: [d, ...prev.documentos] } : prev))
                 }
               />
+
+              <Separator />
+
+              <DatosLegalesSection
+                empleadoId={expediente.empleado.id}
+                datosLegales={expediente.datos_legales}
+                onGuardado={(datos) => setExpediente((prev) => (prev ? { ...prev, datos_legales: datos } : prev))}
+              />
             </>
           )}
         </div>
@@ -918,7 +1321,14 @@ function ContratosSection({
   const [error, setError] = useState<string | null>(null)
 
   async function handleCrear() {
-    if (!fechaInicio || !salario) return
+    const errorInicio = validarRequerido(fechaInicio, "La fecha de inicio")
+    const errorRango = validarRangoFechas(fechaInicio, fechaFin)
+    const errorSalario = validarMonto(salario, "El salario")
+    const primerError = errorInicio ?? errorRango ?? errorSalario
+    if (primerError) {
+      setError(primerError)
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
@@ -1032,11 +1442,15 @@ function DocumentosSection({
   }
 
   async function handleSubir() {
-    if (!archivo) return
+    const errorArchivo = validarArchivo(archivo)
+    if (errorArchivo) {
+      setError(errorArchivo)
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
-      const nuevo = await cargarDocumento(empleadoId, tipo, archivo)
+      const nuevo = await cargarDocumento(empleadoId, tipo, archivo as File)
       onDocumentoCargado({
         id: nuevo.id,
         empleado_id: empleadoId,
@@ -1103,6 +1517,133 @@ function DocumentosSection({
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  )
+}
+
+function DatosLegalesSection({
+  empleadoId,
+  datosLegales,
+  onGuardado,
+}: {
+  empleadoId: string
+  datosLegales: DatosLegalesOut | null
+  onGuardado: (datos: DatosLegalesOut) => void
+}) {
+  const [editando, setEditando] = useState(false)
+  const [numeroSeguridadSocial, setNumeroSeguridadSocial] = useState("")
+  const [beneficiarios, setBeneficiarios] = useState("")
+  const [informacionEmergencia, setInformacionEmergencia] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [errores, setErrores] = useState<Record<string, string>>({})
+
+  function iniciarEdicion() {
+    setNumeroSeguridadSocial(datosLegales?.numero_seguridad_social ?? "")
+    setBeneficiarios(datosLegales?.beneficiarios ?? "")
+    setInformacionEmergencia(datosLegales?.informacion_emergencia ?? "")
+    setError(null)
+    setErrores({})
+    setEditando(true)
+  }
+
+  async function handleGuardar() {
+    const nuevosErrores = recolectarErrores({
+      numeroSeguridadSocial: validarLongitudMaxima(numeroSeguridadSocial, 50, "El numero de seguridad social"),
+      beneficiarios: validarLongitudMaxima(beneficiarios, 2000, "Los beneficiarios"),
+      informacionEmergencia: validarLongitudMaxima(informacionEmergencia, 2000, "La informacion de emergencia"),
+    })
+    setErrores(nuevosErrores)
+    if (Object.keys(nuevosErrores).length > 0) return
+
+    setSubmitting(true)
+    setError(null)
+    try {
+      const datos = await guardarDatosLegales(empleadoId, {
+        numero_seguridad_social: numeroSeguridadSocial.trim() || null,
+        beneficiarios: beneficiarios.trim() || null,
+        informacion_emergencia: informacionEmergencia.trim() || null,
+      })
+      onGuardado(datos)
+      setEditando(false)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudieron guardar los datos legales")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">Datos legales</h3>
+        {!editando && (
+          <Button type="button" variant="ghost" size="sm" onClick={iniciarEdicion}>
+            {datosLegales ? "Editar" : "+ Agregar"}
+          </Button>
+        )}
+      </div>
+
+      {editando ? (
+        <div className="flex flex-col gap-2 rounded-md border border-border/60 p-3">
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Numero de seguridad social</Label>
+            <Input
+              value={numeroSeguridadSocial}
+              onChange={(e) => setNumeroSeguridadSocial(e.target.value)}
+              aria-invalid={!!errores.numeroSeguridadSocial}
+            />
+            {errores.numeroSeguridadSocial && (
+              <p className="text-xs text-destructive">{errores.numeroSeguridadSocial}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Beneficiarios</Label>
+            <Input
+              value={beneficiarios}
+              onChange={(e) => setBeneficiarios(e.target.value)}
+              aria-invalid={!!errores.beneficiarios}
+            />
+            {errores.beneficiarios && <p className="text-xs text-destructive">{errores.beneficiarios}</p>}
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Informacion de emergencia</Label>
+            <Input
+              value={informacionEmergencia}
+              onChange={(e) => setInformacionEmergencia(e.target.value)}
+              aria-invalid={!!errores.informacionEmergencia}
+            />
+            {errores.informacionEmergencia && (
+              <p className="text-xs text-destructive">{errores.informacionEmergencia}</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" disabled={submitting} onClick={handleGuardar}>
+              {submitting ? "Guardando..." : "Guardar"}
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setEditando(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      ) : datosLegales ? (
+        <div className="flex flex-col gap-1 text-sm">
+          <p>
+            <span className="text-muted-foreground">Seguridad social:</span>{" "}
+            {datosLegales.numero_seguridad_social || "-"}
+          </p>
+          <p>
+            <span className="text-muted-foreground">Beneficiarios:</span> {datosLegales.beneficiarios || "-"}
+          </p>
+          <p>
+            <span className="text-muted-foreground">Emergencia:</span>{" "}
+            {datosLegales.informacion_emergencia || "-"}
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Sin datos legales registrados.</p>
       )}
     </section>
   )
