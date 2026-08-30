@@ -16,11 +16,11 @@ import { useAuth } from "@/hooks/use-auth"
 const modulos = [
   { titulo: "Reclutamiento (ATS)", descripcion: "Vacantes, postulaciones y entrevistas", icon: Briefcase, ruta: "/reclutamiento" },
   { titulo: "Expediente Digital", descripcion: "Datos personales, contratos y documentos", icon: IdCard, ruta: "/empleados" },
-  { titulo: "Asistencia y Tiempo", descripcion: "Marcaje, permisos y vacaciones", icon: CalendarClock },
-  { titulo: "Nomina", descripcion: "Calculo de salarios y volantes de pago", icon: Wallet },
+  { titulo: "Asistencia y Tiempo", descripcion: "Marcaje, permisos y vacaciones", icon: CalendarClock, ruta: "/asistencia" },
+  { titulo: "Nomina", descripcion: "Calculo de salarios y volantes de pago", icon: Wallet, ruta: "/nomina" },
   { titulo: "Desempeno y KPIs", descripcion: "Objetivos y evaluaciones", icon: ClipboardCheck, ruta: "/desempeno" },
-  { titulo: "Capacitacion (LMS)", descripcion: "Cursos y certificaciones", icon: GraduationCap },
-  { titulo: "Autoservicio (ESS)", descripcion: "Portal del empleado", icon: UserCircle2 },
+  { titulo: "Capacitacion (LMS)", descripcion: "Cursos y certificaciones", icon: GraduationCap, ruta: "/capacitacion" },
+  { titulo: "Autoservicio (ESS)", descripcion: "Portal del empleado", icon: UserCircle2, ruta: "/autoservicio" },
 ]
 
 export function DashboardPage() {

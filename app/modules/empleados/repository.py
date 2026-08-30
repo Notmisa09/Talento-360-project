@@ -102,6 +102,10 @@ class EmpleadoRepository:
     def count(self) -> int:
         return self.db.execute(select(func.count()).select_from(Empleado)).scalar_one()
 
+    def list_activos(self) -> list[Empleado]:
+        stmt = select(Empleado).where(Empleado.estado == EstadoEmpleadoEnum.ACTIVO)
+        return list(self.db.execute(stmt).scalars().all())
+
     def list(
         self,
         page: int,

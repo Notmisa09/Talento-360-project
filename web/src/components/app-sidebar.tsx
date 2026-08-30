@@ -21,18 +21,16 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/hooks/use-auth"
 
-const modulos = [
-  { titulo: "Asistencia y Tiempo", icon: CalendarClock },
-  { titulo: "Nomina", icon: Wallet },
-  { titulo: "Capacitacion (LMS)", icon: GraduationCap },
-  { titulo: "Autoservicio (ESS)", icon: UserCircle2 },
+const modulosRrhh = [
+  { titulo: "Asistencia y Tiempo", icon: CalendarClock, path: "/asistencia" },
+  { titulo: "Nomina", icon: Wallet, path: "/nomina" },
+  { titulo: "Capacitacion (LMS)", icon: GraduationCap, path: "/capacitacion" },
 ]
 
 function initialsFromEmail(email: string) {
@@ -68,6 +66,16 @@ export function AppSidebar() {
                 >
                   <LayoutDashboard />
                   <span>Inicio</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={location.pathname === "/autoservicio"}
+                  tooltip="Autoservicio (ESS)"
+                  render={<Link to="/autoservicio" />}
+                >
+                  <UserCircle2 />
+                  <span>Mi espacio</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {(user?.rol === "ADMIN_RRHH" || user?.rol === "SUPERVISOR") && (
@@ -120,22 +128,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Modulos HRM</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {modulos.map(({ titulo, icon: Icon }) => (
-                <SidebarMenuItem key={titulo}>
-                  <SidebarMenuButton disabled className="cursor-not-allowed text-muted-foreground opacity-60">
-                    <Icon />
-                    <span>{titulo}</span>
-                  </SidebarMenuButton>
-                  <SidebarMenuBadge className="text-muted-foreground">Pronto</SidebarMenuBadge>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {(user?.rol === "ADMIN_RRHH" || user?.rol === "SUPERVISOR") && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Modulos HRM</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {modulosRrhh.map(({ titulo, icon: Icon, path }) => (
+                  <SidebarMenuItem key={titulo}>
+                    <SidebarMenuButton isActive={location.pathname === path} tooltip={titulo} render={<Link to={path} />}>
+                      <Icon />
+                      <span>{titulo}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

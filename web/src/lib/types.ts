@@ -301,3 +301,138 @@ export interface HistorialDesempenoOut {
   objetivos: ObjetivoOut[]
   evaluaciones: EvaluacionOut[]
 }
+
+// --- Asistencia y Tiempo ---
+
+export type TipoPermisoEnum = "VACACIONES" | "ENFERMEDAD" | "PERSONAL" | "LUTO" | "MATERNIDAD_PATERNIDAD" | "OTRO"
+export type EstadoSolicitudEnum = "PENDIENTE" | "APROBADA" | "RECHAZADA"
+
+export interface RegistroAsistenciaOut {
+  id: string
+  empleado_id: string
+  hora_entrada: string
+  hora_salida: string | null
+  horas_trabajadas: number | null
+  horas_extra: number | null
+  origen: string
+}
+
+export interface ResumenAsistenciaOut {
+  empleado_id: string
+  mes: string
+  dias_registrados: number
+  horas_trabajadas_total: number
+  horas_extra_total: number
+}
+
+export interface SolicitudPermisoOut {
+  id: string
+  empleado_id: string
+  tipo: TipoPermisoEnum
+  fecha_inicio: string
+  fecha_fin: string
+  motivo: string | null
+  estado: EstadoSolicitudEnum
+  aprobado_por: string | null
+  motivo_rechazo: string | null
+  dias_solicitados: number
+  creado_en: string
+}
+
+export interface SolicitudPermisoCreate {
+  empleado_id: string
+  tipo: TipoPermisoEnum
+  fecha_inicio: string
+  fecha_fin: string
+  motivo?: string | null
+}
+
+export interface SaldoVacacionesOut {
+  id: string
+  empleado_id: string
+  dias_disponibles: number
+  dias_tomados: number
+  anio: number
+}
+
+// --- Nomina (Payroll) ---
+
+export type EstadoPeriodoEnum = "ABIERTO" | "PROCESADO" | "CERRADO"
+export type TipoConceptoEnum =
+  | "SALARIO_BASE"
+  | "HORAS_EXTRA"
+  | "BONIFICACION"
+  | "DEDUCCION_SFS"
+  | "DEDUCCION_AFP"
+  | "DEDUCCION_ISR"
+  | "OTRO"
+
+export interface PeriodoNominaOut {
+  id: string
+  fecha_inicio: string
+  fecha_fin: string
+  estado: EstadoPeriodoEnum
+  creado_en: string
+}
+
+export interface PeriodoNominaCreate {
+  fecha_inicio: string
+  fecha_fin: string
+}
+
+export interface ConceptoNominaOut {
+  id: string
+  tipo: TipoConceptoEnum
+  descripcion: string
+  monto: number
+}
+
+export interface NominaOut {
+  id: string
+  periodo_id: string
+  empleado_id: string
+  salario_bruto: number
+  total_deducciones: number
+  total_bonificaciones: number
+  salario_neto: number
+  creado_en: string
+}
+
+export interface NominaDetalleOut extends NominaOut {
+  conceptos: ConceptoNominaOut[]
+}
+
+export interface ProcesarPeriodoResultadoOut {
+  periodo: PeriodoNominaOut
+  nominas_generadas: number
+}
+
+// --- Capacitacion (LMS) ---
+
+export type EstadoInscripcionEnum = "INSCRITO" | "EN_PROGRESO" | "COMPLETADO" | "ABANDONADO"
+
+export interface CursoOut {
+  id: string
+  nombre: string
+  descripcion: string | null
+  obligatorio: boolean
+  duracion_horas: number
+}
+
+export interface CursoCreate {
+  nombre: string
+  descripcion?: string | null
+  obligatorio?: boolean
+  duracion_horas: number
+}
+
+export interface InscripcionOut {
+  id: string
+  curso_id: string
+  empleado_id: string
+  estado: EstadoInscripcionEnum
+  progreso: number
+  fecha_finalizacion: string | null
+  certificado_url: string | null
+  creado_en: string
+}

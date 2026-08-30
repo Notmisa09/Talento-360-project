@@ -6,6 +6,8 @@ import type {
   ContratarPostulacionRequest,
   ContratoCreate,
   ContratoOut,
+  CursoCreate,
+  CursoOut,
   DatosLegalesOut,
   DatosLegalesUpsert,
   DepartamentoCreate,
@@ -19,12 +21,23 @@ import type {
   EvaluacionOut,
   ExpedienteOut,
   HistorialDesempenoOut,
+  InscripcionOut,
+  NominaDetalleOut,
+  NominaOut,
   ObjetivoCreate,
   ObjetivoOut,
   PaginatedResponse,
+  PeriodoNominaCreate,
+  PeriodoNominaOut,
   PostulacionOut,
+  ProcesarPeriodoResultadoOut,
   PuestoCreate,
   PuestoOut,
+  RegistroAsistenciaOut,
+  ResumenAsistenciaOut,
+  SaldoVacacionesOut,
+  SolicitudPermisoCreate,
+  SolicitudPermisoOut,
   SucursalCreate,
   SucursalOut,
   Token,
@@ -247,15 +260,15 @@ export async function cargarDocumento(
   return authorizedRequest(`/empleados/${empleadoId}/documentos`, { method: "POST", body: form })
 }
 
-export async function descargarDocumento(empleadoId: string, documentoId: string, nombreArchivo: string): Promise<void> {
+async function descargarBlob(path: string, nombreArchivo: string): Promise<void> {
   const token = authStorage.getAccessToken()
-  const res = await fetch(`${API_BASE}/empleados/${empleadoId}/documentos/${documentoId}/descargar`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
 
   if (!res.ok) {
     const err = await parseErrorBody(res)
-    throw new ApiError(detailToMessage(err.detail, "No se pudo descargar el documento"), res.status, err.code)
+    throw new ApiError(detailToMessage(err.detail, "No se pudo descargar el archivo"), res.status, err.code)
   }
 
   const blob = await res.blob()
@@ -265,6 +278,10 @@ export async function descargarDocumento(empleadoId: string, documentoId: string
   link.download = nombreArchivo
   link.click()
   URL.revokeObjectURL(url)
+}
+
+export async function descargarDocumento(empleadoId: string, documentoId: string, nombreArchivo: string): Promise<void> {
+  return descargarBlob(`/empleados/${empleadoId}/documentos/${documentoId}/descargar`, nombreArchivo)
 }
 
 export async function listarVacantes(
@@ -391,6 +408,183 @@ export async function crearEvaluacion(data: EvaluacionCreate): Promise<Evaluacio
 
 export async function obtenerHistorialDesempeno(empleadoId: string): Promise<HistorialDesempenoOut> {
   return authorizedRequest(`/desempeno/empleados/${empleadoId}/historial-desempeno`)
+}
+
+// --- Asistencia y Tiempo ---
+
+export async function marcarEntrada(empleadoId: string, origen = "MANUAL"): Promise<RegistroAsistenciaOut> {
+  return authorizedRequest("/asistencia/marcaje/entrada", {
+    method: "POST",
+    body: JSON.stringify({ empleado_id: empleadoId, origen }),
+  })
+}
+
+export async function marcarSalida(empleadoId: string): Promise<RegistroAsistenciaOut> {
+  return authorizedRequest("/asistencia/marcaje/salida", {
+    method: "POST",
+    body: JSON.stringify({ empleado_id: empleadoId }),
+  })
+}
+
+export async function listarRegistrosAsistencia(
+  empleadoId: string,
+  opts?: { desde?: string; hasta?: string }
+): Promise<RegistroAsistenciaOut[]> {
+  const params = new URLSearchParams({ empleado_id: empleadoId })
+  if (opts?.desde) params.set("desde", opts.desde)
+  if (opts?.hasta) params.set("hasta", opts.hasta)
+  return authorizedRequest(`/asistencia/registros?${params.toString()}`)
+}
+
+export async function obtenerResumenAsistencia(empleadoId: string, mes: string): Promise<ResumenAsistenciaOut> {
+  return authorizedRequest(`/asistencia/empleados/${empleadoId}/resumen?mes=${mes}`)
+}
+
+export async function crearSolicitudPermiso(data: SolicitudPermisoCreate): Promise<SolicitudPermisoOut> {
+  return authorizedRequest("/asistencia/permisos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function listarSolicitudesPermiso(opts?: {
+  empleadoId?: string
+  estado?: string
+}): Promise<SolicitudPermisoOut[]> {
+  const params = new URLSearchParams()
+  if (opts?.empleadoId) params.set("empleado_id", opts.empleadoId)
+  if (opts?.estado) params.set("estado", opts.estado)
+  const query = params.toString()
+  return authorizedRequest(`/asistencia/permisos${query ? `?${query}` : ""}`)
+}
+
+export async function aprobarSolicitudPermiso(solicitudId: string): Promise<SolicitudPermisoOut> {
+  return authorizedRequest(`/asistencia/permisos/${solicitudId}/aprobar`, { method: "PATCH" })
+}
+
+export async function rechazarSolicitudPermiso(solicitudId: string, motivo: string | null): Promise<SolicitudPermisoOut> {
+  return authorizedRequest(`/asistencia/permisos/${solicitudId}/rechazar`, {
+    method: "PATCH",
+    body: JSON.stringify({ motivo }),
+  })
+}
+
+export async function obtenerSaldoVacaciones(empleadoId: string, anio?: number): Promise<SaldoVacacionesOut> {
+  const query = anio ? `?anio=${anio}` : ""
+  return authorizedRequest(`/asistencia/vacaciones/${empleadoId}/saldo${query}`)
+}
+
+export async function ajustarSaldoVacaciones(
+  empleadoId: string,
+  diasDisponibles: number,
+  anio?: number
+): Promise<SaldoVacacionesOut> {
+  return authorizedRequest(`/asistencia/vacaciones/${empleadoId}/saldo`, {
+    method: "PATCH",
+    body: JSON.stringify({ dias_disponibles: diasDisponibles, anio }),
+  })
+}
+
+// --- Nomina (Payroll) ---
+
+export async function listarPeriodosNomina(): Promise<PeriodoNominaOut[]> {
+  return authorizedRequest("/nomina/periodos")
+}
+
+export async function crearPeriodoNomina(data: PeriodoNominaCreate): Promise<PeriodoNominaOut> {
+  return authorizedRequest("/nomina/periodos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function procesarPeriodoNomina(periodoId: string): Promise<ProcesarPeriodoResultadoOut> {
+  return authorizedRequest(`/nomina/periodos/${periodoId}/procesar`, { method: "POST" })
+}
+
+export async function cerrarPeriodoNomina(periodoId: string): Promise<PeriodoNominaOut> {
+  return authorizedRequest(`/nomina/periodos/${periodoId}/cerrar`, { method: "POST" })
+}
+
+export async function listarNominasDeEmpleado(empleadoId: string): Promise<NominaOut[]> {
+  return authorizedRequest(`/nomina/empleados/${empleadoId}/nominas`)
+}
+
+export async function obtenerNomina(nominaId: string): Promise<NominaDetalleOut> {
+  return authorizedRequest(`/nomina/nominas/${nominaId}`)
+}
+
+export async function descargarVolante(nominaId: string): Promise<void> {
+  return descargarBlob(`/nomina/nominas/${nominaId}/volante`, `volante_${nominaId}.pdf`)
+}
+
+// --- Capacitacion (LMS) ---
+
+export async function listarCursos(): Promise<CursoOut[]> {
+  return authorizedRequest("/capacitacion/cursos")
+}
+
+export async function crearCurso(data: CursoCreate): Promise<CursoOut> {
+  return authorizedRequest("/capacitacion/cursos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function inscribirEmpleadoACurso(cursoId: string, empleadoId: string): Promise<InscripcionOut> {
+  return authorizedRequest(`/capacitacion/cursos/${cursoId}/inscribir`, {
+    method: "POST",
+    body: JSON.stringify({ empleado_id: empleadoId }),
+  })
+}
+
+export async function listarInscripcionesDeCurso(cursoId: string): Promise<InscripcionOut[]> {
+  return authorizedRequest(`/capacitacion/cursos/${cursoId}/inscripciones`)
+}
+
+export async function actualizarProgresoInscripcion(inscripcionId: string, progreso: number): Promise<InscripcionOut> {
+  return authorizedRequest(`/capacitacion/inscripciones/${inscripcionId}/progreso`, {
+    method: "PATCH",
+    body: JSON.stringify({ progreso }),
+  })
+}
+
+export async function descargarCertificado(inscripcionId: string): Promise<void> {
+  return descargarBlob(`/capacitacion/inscripciones/${inscripcionId}/certificado/descargar`, `certificado_${inscripcionId}.pdf`)
+}
+
+export async function listarCertificadosDeEmpleado(empleadoId: string): Promise<InscripcionOut[]> {
+  return authorizedRequest(`/capacitacion/empleados/${empleadoId}/certificados`)
+}
+
+// --- Autoservicio (ESS) ---
+
+export async function miPerfil(): Promise<EmpleadoOut> {
+  return authorizedRequest("/autoservicio/mi-perfil")
+}
+
+export async function misVolantesPago(): Promise<NominaOut[]> {
+  return authorizedRequest("/autoservicio/mis-volantes-pago")
+}
+
+export async function descargarMiVolante(nominaId: string): Promise<void> {
+  return descargarBlob(`/autoservicio/mis-volantes-pago/${nominaId}/descargar`, `volante_${nominaId}.pdf`)
+}
+
+export async function solicitarMiPermiso(data: {
+  tipo: string
+  fecha_inicio: string
+  fecha_fin: string
+  motivo?: string | null
+}): Promise<SolicitudPermisoOut> {
+  return authorizedRequest("/autoservicio/mis-permisos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function misPermisos(): Promise<SolicitudPermisoOut[]> {
+  return authorizedRequest("/autoservicio/mis-permisos")
+}
+
+export async function miSaldoVacaciones(): Promise<SaldoVacacionesOut> {
+  return authorizedRequest("/autoservicio/mi-saldo-vacaciones")
+}
+
+export async function misCursos(): Promise<InscripcionOut[]> {
+  return authorizedRequest("/autoservicio/mis-cursos")
+}
+
+export async function misEvaluaciones(): Promise<EvaluacionOut[]> {
+  return authorizedRequest("/autoservicio/mis-evaluaciones")
 }
 
 export async function refresh(refreshToken: string): Promise<Token> {

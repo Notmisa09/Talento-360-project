@@ -23,6 +23,10 @@ from app.modules.desempeno.router import (
     evaluaciones_router,
     objetivos_router,
 )
+from app.modules.asistencia.router import asistencia_router
+from app.modules.nomina.router import nominas_router, periodos_nomina_router
+from app.modules.capacitacion.router import capacitacion_router, cursos_router, inscripciones_router
+from app.modules.autoservicio.router import autoservicio_router
 
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_PREFIX}/openapi.json")
 
@@ -51,6 +55,13 @@ app.include_router(ciclos_evaluacion_router, prefix=settings.API_V1_PREFIX)
 app.include_router(objetivos_router, prefix=settings.API_V1_PREFIX)
 app.include_router(evaluaciones_router, prefix=settings.API_V1_PREFIX)
 app.include_router(desempeno_router, prefix=settings.API_V1_PREFIX)
+app.include_router(asistencia_router, prefix=settings.API_V1_PREFIX)
+app.include_router(periodos_nomina_router, prefix=settings.API_V1_PREFIX)
+app.include_router(nominas_router, prefix=settings.API_V1_PREFIX)
+app.include_router(cursos_router, prefix=settings.API_V1_PREFIX)
+app.include_router(inscripciones_router, prefix=settings.API_V1_PREFIX)
+app.include_router(capacitacion_router, prefix=settings.API_V1_PREFIX)
+app.include_router(autoservicio_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["Health"])
