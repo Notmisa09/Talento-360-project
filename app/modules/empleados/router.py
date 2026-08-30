@@ -71,6 +71,13 @@ def actualizar_sucursal(
     return SucursalService(db).actualizar(sucursal_id, data)
 
 
+@sucursales_router.delete("/{sucursal_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_sucursal(
+    sucursal_id: UUID, db: Session = Depends(get_db), _: Usuario = Depends(require_role(*GESTION_RRHH))
+):
+    SucursalService(db).eliminar(sucursal_id)
+
+
 @departamentos_router.post("", response_model=DepartamentoOut, status_code=status.HTTP_201_CREATED)
 def crear_departamento(
     data: DepartamentoCreate, db: Session = Depends(get_db), _: Usuario = Depends(require_role(*GESTION_RRHH))
@@ -91,6 +98,13 @@ def actualizar_departamento(
     _: Usuario = Depends(require_role(*GESTION_RRHH)),
 ):
     return DepartamentoService(db).actualizar(departamento_id, data)
+
+
+@departamentos_router.delete("/{departamento_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_departamento(
+    departamento_id: UUID, db: Session = Depends(get_db), _: Usuario = Depends(require_role(*GESTION_RRHH))
+):
+    DepartamentoService(db).eliminar(departamento_id)
 
 
 @puestos_router.post("", response_model=PuestoOut, status_code=status.HTTP_201_CREATED)
@@ -117,6 +131,13 @@ def actualizar_puesto(
     _: Usuario = Depends(require_role(*GESTION_RRHH)),
 ):
     return PuestoService(db).actualizar(puesto_id, data)
+
+
+@puestos_router.delete("/{puesto_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_puesto(
+    puesto_id: UUID, db: Session = Depends(get_db), _: Usuario = Depends(require_role(*GESTION_RRHH))
+):
+    PuestoService(db).eliminar(puesto_id)
 
 
 @empleados_router.post("", response_model=EmpleadoOut, status_code=status.HTTP_201_CREATED)

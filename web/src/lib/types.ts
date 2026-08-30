@@ -50,6 +50,12 @@ export interface SucursalCreate {
   ciudad?: string | null
 }
 
+export interface SucursalUpdate {
+  nombre?: string
+  direccion?: string | null
+  ciudad?: string | null
+}
+
 export interface DepartamentoOut {
   id: string
   nombre: string
@@ -58,6 +64,11 @@ export interface DepartamentoOut {
 
 export interface DepartamentoCreate {
   nombre: string
+  gerente_id?: string | null
+}
+
+export interface DepartamentoUpdate {
+  nombre?: string
   gerente_id?: string | null
 }
 
@@ -74,6 +85,13 @@ export interface PuestoCreate {
   salario_base: number
   descripcion?: string | null
   departamento_id: string
+}
+
+export interface PuestoUpdate {
+  titulo?: string
+  salario_base?: number
+  descripcion?: string | null
+  departamento_id?: string
 }
 
 export interface EmpleadoOut {

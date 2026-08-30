@@ -3,16 +3,20 @@ import uuid
 from pathlib import Path
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.modules.empleados.exceptions import (
     CedulaYaRegistradaError,
     ContratoNoEncontradoError,
+    DepartamentoEnUsoError,
     DepartamentoNoEncontradoError,
     DocumentoNoEncontradoError,
     EmpleadoNoEncontradoError,
+    PuestoEnUsoError,
     PuestoNoEncontradoError,
+    SucursalEnUsoError,
     SucursalNoEncontradaError,
     UsuarioYaVinculadoError,
 )
@@ -52,9 +56,23 @@ from app.modules.empleados.schemas import (
 )
 
 
+def _vacante_usa(db: Session, *, sucursal_id: UUID | None = None, departamento_id: UUID | None = None) -> bool:
+    """Verifica si alguna Vacante (modulo Reclutamiento) referencia la sucursal/departamento dados."""
+    from app.modules.reclutamiento.models import Vacante
+
+    stmt = select(Vacante.id).limit(1)
+    if sucursal_id is not None:
+        stmt = stmt.where(Vacante.sucursal_id == sucursal_id)
+    if departamento_id is not None:
+        stmt = stmt.where(Vacante.departamento_id == departamento_id)
+    return db.execute(stmt).first() is not None
+
+
 class SucursalService:
     def __init__(self, db: Session) -> None:
+        self.db = db
         self.repo = SucursalRepository(db)
+        self.empleados = EmpleadoRepository(db)
 
     def crear(self, data: SucursalCreate) -> Sucursal:
         return self.repo.create(Sucursal(**data.model_dump()))
@@ -74,10 +92,19 @@ class SucursalService:
             setattr(sucursal, campo, valor)
         return self.repo.save(sucursal)
 
+    def eliminar(self, sucursal_id: UUID) -> None:
+        sucursal = self.obtener(sucursal_id)
+        if self.empleados.exists_by_sucursal(sucursal_id) or _vacante_usa(self.db, sucursal_id=sucursal_id):
+            raise SucursalEnUsoError()
+        self.repo.delete(sucursal)
+
 
 class DepartamentoService:
     def __init__(self, db: Session) -> None:
+        self.db = db
         self.repo = DepartamentoRepository(db)
+        self.empleados = EmpleadoRepository(db)
+        self.puestos = PuestoRepository(db)
 
     def crear(self, data: DepartamentoCreate) -> Departamento:
         return self.repo.create(Departamento(**data.model_dump()))
@@ -97,11 +124,23 @@ class DepartamentoService:
             setattr(departamento, campo, valor)
         return self.repo.save(departamento)
 
+    def eliminar(self, departamento_id: UUID) -> None:
+        departamento = self.obtener(departamento_id)
+        en_uso = (
+            self.empleados.exists_by_departamento(departamento_id)
+            or self.puestos.exists_by_departamento(departamento_id)
+            or _vacante_usa(self.db, departamento_id=departamento_id)
+        )
+        if en_uso:
+            raise DepartamentoEnUsoError()
+        self.repo.delete(departamento)
+
 
 class PuestoService:
     def __init__(self, db: Session) -> None:
         self.repo = PuestoRepository(db)
         self.departamentos = DepartamentoRepository(db)
+        self.empleados = EmpleadoRepository(db)
 
     def crear(self, data: PuestoCreate) -> Puesto:
         if self.departamentos.get_by_id(data.departamento_id) is None:
@@ -125,6 +164,12 @@ class PuestoService:
         for campo, valor in cambios.items():
             setattr(puesto, campo, valor)
         return self.repo.save(puesto)
+
+    def eliminar(self, puesto_id: UUID) -> None:
+        puesto = self.obtener(puesto_id)
+        if self.empleados.exists_by_puesto(puesto_id):
+            raise PuestoEnUsoError()
+        self.repo.delete(puesto)
 
 
 class EmpleadoService:

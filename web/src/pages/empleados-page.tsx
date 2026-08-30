@@ -61,8 +61,10 @@ import {
   listarEmpleados,
   listarPuestos,
   listarSucursales,
+  listarUsuarios,
   obtenerExpediente,
 } from "@/lib/api"
+import { useAuth } from "@/hooks/use-auth"
 import type {
   DatosLegalesOut,
   DepartamentoOut,
@@ -73,6 +75,7 @@ import type {
   SucursalOut,
   TipoContratoEnum,
   TipoDocumentoEnum,
+  UsuarioOut,
 } from "@/lib/types"
 import {
   recolectarErrores,
@@ -113,6 +116,9 @@ const TIPOS_DOCUMENTO: { value: TipoDocumentoEnum; label: string }[] = [
 ]
 
 export function EmpleadosPage() {
+  const { user } = useAuth()
+  const puedeVincularUsuarios = user?.rol === "ADMIN_RRHH"
+
   const [empleados, setEmpleados] = useState<EmpleadoOut[]>([])
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(0)
@@ -127,6 +133,7 @@ export function EmpleadosPage() {
   const [sucursales, setSucursales] = useState<SucursalOut[]>([])
   const [departamentos, setDepartamentos] = useState<DepartamentoOut[]>([])
   const [puestos, setPuestos] = useState<PuestoOut[]>([])
+  const [usuarios, setUsuarios] = useState<UsuarioOut[]>([])
 
   const [busyId, setBusyId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -136,6 +143,7 @@ export function EmpleadosPage() {
   const sucursalesMap = useMemo(() => new Map(sucursales.map((s) => [s.id, s.nombre])), [sucursales])
   const departamentosMap = useMemo(() => new Map(departamentos.map((d) => [d.id, d.nombre])), [departamentos])
   const puestosMap = useMemo(() => new Map(puestos.map((p) => [p.id, p.titulo])), [puestos])
+  const usuariosMap = useMemo(() => new Map(usuarios.map((u) => [u.id, u.email])), [usuarios])
 
   const cargarCatalogos = useCallback(async () => {
     try {
@@ -146,7 +154,15 @@ export function EmpleadosPage() {
     } catch {
       toast.error("No se pudieron cargar los catalogos de sucursales/departamentos/puestos")
     }
-  }, [])
+    if (puedeVincularUsuarios) {
+      try {
+        const data = await listarUsuarios(1, 100)
+        setUsuarios(data.items)
+      } catch {
+        toast.error("No se pudo cargar la lista de cuentas de usuario")
+      }
+    }
+  }, [puedeVincularUsuarios])
 
   const cargarEmpleados = useCallback(
     async (targetPage: number) => {
@@ -207,6 +223,8 @@ export function EmpleadosPage() {
           sucursales={sucursales}
           departamentos={departamentos}
           puestos={puestos}
+          usuarios={usuarios}
+          puedeVincularUsuarios={puedeVincularUsuarios}
           onSucursalCreada={(s) => setSucursales((prev) => [...prev, s])}
           onDepartamentoCreado={(d) => setDepartamentos((prev) => [...prev, d])}
           onPuestoCreado={(p) => setPuestos((prev) => [...prev, p])}
@@ -388,6 +406,7 @@ export function EmpleadosPage() {
         departamentosMap={departamentosMap}
         puestosMap={puestosMap}
         sucursalesMap={sucursalesMap}
+        usuariosMap={usuariosMap}
       />
 
       <EditarEmpleadoDialog
@@ -398,6 +417,8 @@ export function EmpleadosPage() {
         sucursales={sucursales}
         departamentos={departamentos}
         puestos={puestos}
+        usuarios={usuarios}
+        puedeVincularUsuarios={puedeVincularUsuarios}
         onActualizado={(actualizado) => {
           setEmpleados((prev) => prev.map((e) => (e.id === actualizado.id ? actualizado : e)))
           toast.success(`${actualizado.nombres} ${actualizado.apellidos} actualizado`)
@@ -593,6 +614,8 @@ function CrearEmpleadoDialog({
   sucursales,
   departamentos,
   puestos,
+  usuarios,
+  puedeVincularUsuarios,
   onSucursalCreada,
   onDepartamentoCreado,
   onPuestoCreado,
@@ -603,6 +626,8 @@ function CrearEmpleadoDialog({
   sucursales: SucursalOut[]
   departamentos: DepartamentoOut[]
   puestos: PuestoOut[]
+  usuarios: UsuarioOut[]
+  puedeVincularUsuarios: boolean
   onSucursalCreada: (s: SucursalOut) => void
   onDepartamentoCreado: (d: DepartamentoOut) => void
   onPuestoCreado: (p: PuestoOut) => void
@@ -618,6 +643,7 @@ function CrearEmpleadoDialog({
   const [sucursalId, setSucursalId] = useState("")
   const [departamentoId, setDepartamentoId] = useState("")
   const [puestoId, setPuestoId] = useState("")
+  const [usuarioId, setUsuarioId] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errores, setErrores] = useState<Record<string, string>>({})
@@ -637,6 +663,7 @@ function CrearEmpleadoDialog({
     setSucursalId("")
     setDepartamentoId("")
     setPuestoId("")
+    setUsuarioId("")
     setError(null)
     setErrores({})
   }
@@ -688,6 +715,7 @@ function CrearEmpleadoDialog({
         sucursal_id: sucursalId,
         departamento_id: departamentoId,
         puesto_id: puestoId,
+        usuario_id: usuarioId || null,
       })
       resetForm()
       onCreated(nuevo)
@@ -924,6 +952,38 @@ function CrearEmpleadoDialog({
             />
           </div>
 
+          {puedeVincularUsuarios && (() => {
+            const opciones = usuarios.filter((u) => u.rol === "EMPLEADO" && u.activo)
+            return (
+              <div className="flex flex-col gap-2">
+                <Label>Cuenta de usuario vinculada (opcional)</Label>
+                <Select value={usuarioId || "NINGUNA"} onValueChange={(v) => setUsuarioId(v === "NINGUNA" ? "" : (v ?? ""))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {(v: string | null) =>
+                        !v || v === "NINGUNA"
+                          ? "Sin vincular"
+                          : (opciones.find((u) => u.id === v)?.email ?? v)
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NINGUNA">Sin vincular</SelectItem>
+                    {opciones.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Permite que este colaborador use el portal de Autoservicio con esa cuenta. Solo se listan
+                  cuentas activas con rol Empleado.
+                </p>
+              </div>
+            )
+          })()}
+
           <DialogFooter>
             <Button type="submit" disabled={submitting}>
               {submitting ? "Registrando..." : "Registrar empleado"}
@@ -941,6 +1001,8 @@ function EditarEmpleadoDialog({
   sucursales,
   departamentos,
   puestos,
+  usuarios,
+  puedeVincularUsuarios,
   onActualizado,
 }: {
   empleado: EmpleadoOut | null
@@ -948,6 +1010,8 @@ function EditarEmpleadoDialog({
   sucursales: SucursalOut[]
   departamentos: DepartamentoOut[]
   puestos: PuestoOut[]
+  usuarios: UsuarioOut[]
+  puedeVincularUsuarios: boolean
   onActualizado: (empleado: EmpleadoOut) => void
 }) {
   const [nombres, setNombres] = useState("")
@@ -957,6 +1021,7 @@ function EditarEmpleadoDialog({
   const [sucursalId, setSucursalId] = useState("")
   const [departamentoId, setDepartamentoId] = useState("")
   const [puestoId, setPuestoId] = useState("")
+  const [usuarioId, setUsuarioId] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errores, setErrores] = useState<Record<string, string>>({})
@@ -970,10 +1035,20 @@ function EditarEmpleadoDialog({
       setSucursalId(empleado.sucursal_id)
       setDepartamentoId(empleado.departamento_id)
       setPuestoId(empleado.puesto_id)
+      setUsuarioId(empleado.usuario_id ?? "")
       setError(null)
       setErrores({})
     }
   }, [empleado])
+
+  const opcionesUsuario = useMemo(() => {
+    const base = usuarios.filter((u) => u.rol === "EMPLEADO" && u.activo)
+    if (empleado?.usuario_id && !base.some((u) => u.id === empleado.usuario_id)) {
+      const actual = usuarios.find((u) => u.id === empleado.usuario_id)
+      if (actual) return [actual, ...base]
+    }
+    return base
+  }, [usuarios, empleado])
 
   const puestosDelDepartamento = departamentoId
     ? puestos.filter((p) => p.departamento_id === departamentoId)
@@ -1018,6 +1093,7 @@ function EditarEmpleadoDialog({
         sucursal_id: sucursalId,
         departamento_id: departamentoId,
         puesto_id: puestoId,
+        usuario_id: usuarioId || null,
       })
       onActualizado(actualizado)
     } catch (err) {
@@ -1177,6 +1253,35 @@ function EditarEmpleadoDialog({
             {errores.puestoId && <p className="text-xs text-destructive">{errores.puestoId}</p>}
           </div>
 
+          {puedeVincularUsuarios && (
+            <div className="flex flex-col gap-2">
+              <Label>Cuenta de usuario vinculada</Label>
+              <Select value={usuarioId || "NINGUNA"} onValueChange={(v) => setUsuarioId(v === "NINGUNA" ? "" : (v ?? ""))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {(v: string | null) =>
+                      !v || v === "NINGUNA"
+                        ? "Sin vincular"
+                        : (opcionesUsuario.find((u) => u.id === v)?.email ?? v)
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NINGUNA">Sin vincular</SelectItem>
+                  {opcionesUsuario.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Vincula este expediente a una cuenta para que el colaborador pueda usar el portal de
+                Autoservicio. Elige "Sin vincular" para desvincular la cuenta actual.
+              </p>
+            </div>
+          )}
+
           <DialogFooter>
             <Button type="submit" disabled={submitting}>
               {submitting ? "Guardando..." : "Guardar cambios"}
@@ -1194,12 +1299,14 @@ function ExpedienteSheet({
   departamentosMap,
   puestosMap,
   sucursalesMap,
+  usuariosMap,
 }: {
   empleadoId: string | null
   onOpenChange: (open: boolean) => void
   departamentosMap: Map<string, string>
   puestosMap: Map<string, string>
   sucursalesMap: Map<string, string>
+  usuariosMap: Map<string, string>
 }) {
   const [expediente, setExpediente] = useState<ExpedienteOut | null>(null)
   const [loading, setLoading] = useState(false)
@@ -1267,6 +1374,14 @@ function ExpedienteSheet({
                 </p>
                 <p>
                   <span className="text-muted-foreground">Antiguedad:</span> {expediente.antiguedad_anios} anos
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Cuenta de Autoservicio:</span>{" "}
+                  {expediente.empleado.usuario_id ? (
+                    (usuariosMap.get(expediente.empleado.usuario_id) ?? "Vinculada")
+                  ) : (
+                    <span className="text-destructive">Sin vincular</span>
+                  )}
                 </p>
               </section>
 

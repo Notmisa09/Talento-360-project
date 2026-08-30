@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from "@/pages/forgot-password-page"
 import { ResetPasswordPage } from "@/pages/reset-password-page"
 import { DashboardPage } from "@/pages/dashboard-page"
 import { UsuariosPage } from "@/pages/usuarios-page"
+import { CatalogosPage } from "@/pages/catalogos-page"
 import { EmpleadosPage } from "@/pages/empleados-page"
 import { ReclutamientoPage } from "@/pages/reclutamiento-page"
 import { DesempenoPage } from "@/pages/desempeno-page"
@@ -29,6 +30,7 @@ function App() {
           </Route>
           <Route element={<ProtectedRoute allowedRoles={["ADMIN_RRHH"]} />}>
             <Route path="/usuarios" element={<UsuariosPage />} />
+            <Route path="/catalogos" element={<CatalogosPage />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={["ADMIN_RRHH", "SUPERVISOR"]} />}>
             <Route path="/empleados" element={<EmpleadosPage />} />

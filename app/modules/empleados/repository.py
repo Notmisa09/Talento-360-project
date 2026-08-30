@@ -36,6 +36,10 @@ class SucursalRepository:
         self.db.refresh(sucursal)
         return sucursal
 
+    def delete(self, sucursal: Sucursal) -> None:
+        self.db.delete(sucursal)
+        self.db.commit()
+
 
 class DepartamentoRepository:
     def __init__(self, db: Session) -> None:
@@ -57,6 +61,10 @@ class DepartamentoRepository:
         self.db.commit()
         self.db.refresh(departamento)
         return departamento
+
+    def delete(self, departamento: Departamento) -> None:
+        self.db.delete(departamento)
+        self.db.commit()
 
 
 class PuestoRepository:
@@ -83,6 +91,14 @@ class PuestoRepository:
         self.db.refresh(puesto)
         return puesto
 
+    def delete(self, puesto: Puesto) -> None:
+        self.db.delete(puesto)
+        self.db.commit()
+
+    def exists_by_departamento(self, departamento_id: UUID) -> bool:
+        stmt = select(Puesto.id).where(Puesto.departamento_id == departamento_id).limit(1)
+        return self.db.execute(stmt).first() is not None
+
 
 class EmpleadoRepository:
     def __init__(self, db: Session) -> None:
@@ -98,6 +114,18 @@ class EmpleadoRepository:
     def get_by_cedula(self, cedula: str) -> Empleado | None:
         stmt = select(Empleado).where(Empleado.cedula_o_dni == cedula)
         return self.db.execute(stmt).scalar_one_or_none()
+
+    def exists_by_sucursal(self, sucursal_id: UUID) -> bool:
+        stmt = select(Empleado.id).where(Empleado.sucursal_id == sucursal_id).limit(1)
+        return self.db.execute(stmt).first() is not None
+
+    def exists_by_departamento(self, departamento_id: UUID) -> bool:
+        stmt = select(Empleado.id).where(Empleado.departamento_id == departamento_id).limit(1)
+        return self.db.execute(stmt).first() is not None
+
+    def exists_by_puesto(self, puesto_id: UUID) -> bool:
+        stmt = select(Empleado.id).where(Empleado.puesto_id == puesto_id).limit(1)
+        return self.db.execute(stmt).first() is not None
 
     def count(self) -> int:
         return self.db.execute(select(func.count()).select_from(Empleado)).scalar_one()

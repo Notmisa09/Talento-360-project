@@ -12,6 +12,7 @@ import type {
   DatosLegalesUpsert,
   DepartamentoCreate,
   DepartamentoOut,
+  DepartamentoUpdate,
   EmpleadoCreate,
   EmpleadoOut,
   EmpleadoUpdate,
@@ -33,6 +34,7 @@ import type {
   ProcesarPeriodoResultadoOut,
   PuestoCreate,
   PuestoOut,
+  PuestoUpdate,
   RegistroAsistenciaOut,
   ResumenAsistenciaOut,
   SaldoVacacionesOut,
@@ -40,6 +42,7 @@ import type {
   SolicitudPermisoOut,
   SucursalCreate,
   SucursalOut,
+  SucursalUpdate,
   Token,
   UsuarioCreate,
   UsuarioOut,
@@ -190,12 +193,31 @@ export async function crearSucursal(data: SucursalCreate): Promise<SucursalOut> 
   return authorizedRequest("/sucursales", { method: "POST", body: JSON.stringify(data) })
 }
 
+export async function actualizarSucursal(sucursalId: string, data: SucursalUpdate): Promise<SucursalOut> {
+  return authorizedRequest(`/sucursales/${sucursalId}`, { method: "PATCH", body: JSON.stringify(data) })
+}
+
+export async function eliminarSucursal(sucursalId: string): Promise<void> {
+  return authorizedRequest(`/sucursales/${sucursalId}`, { method: "DELETE" })
+}
+
 export async function listarDepartamentos(): Promise<DepartamentoOut[]> {
   return authorizedRequest("/departamentos")
 }
 
 export async function crearDepartamento(data: DepartamentoCreate): Promise<DepartamentoOut> {
   return authorizedRequest("/departamentos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function actualizarDepartamento(
+  departamentoId: string,
+  data: DepartamentoUpdate
+): Promise<DepartamentoOut> {
+  return authorizedRequest(`/departamentos/${departamentoId}`, { method: "PATCH", body: JSON.stringify(data) })
+}
+
+export async function eliminarDepartamento(departamentoId: string): Promise<void> {
+  return authorizedRequest(`/departamentos/${departamentoId}`, { method: "DELETE" })
 }
 
 export async function listarPuestos(departamentoId?: string): Promise<PuestoOut[]> {
@@ -205,6 +227,14 @@ export async function listarPuestos(departamentoId?: string): Promise<PuestoOut[
 
 export async function crearPuesto(data: PuestoCreate): Promise<PuestoOut> {
   return authorizedRequest("/puestos", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function actualizarPuesto(puestoId: string, data: PuestoUpdate): Promise<PuestoOut> {
+  return authorizedRequest(`/puestos/${puestoId}`, { method: "PATCH", body: JSON.stringify(data) })
+}
+
+export async function eliminarPuesto(puestoId: string): Promise<void> {
+  return authorizedRequest(`/puestos/${puestoId}`, { method: "DELETE" })
 }
 
 export async function listarEmpleados(

@@ -33,6 +33,14 @@ class SucursalNoEncontradaError(AppException):
         super().__init__("La sucursal indicada no existe")
 
 
+class SucursalEnUsoError(AppException):
+    status_code = 409
+    code = "SUCURSAL_EN_USO"
+
+    def __init__(self) -> None:
+        super().__init__("No se puede eliminar: la sucursal esta asignada a empleados o vacantes")
+
+
 class DepartamentoNoEncontradoError(AppException):
     status_code = 404
     code = "DEPARTAMENTO_NO_ENCONTRADO"
@@ -41,12 +49,28 @@ class DepartamentoNoEncontradoError(AppException):
         super().__init__("El departamento indicado no existe")
 
 
+class DepartamentoEnUsoError(AppException):
+    status_code = 409
+    code = "DEPARTAMENTO_EN_USO"
+
+    def __init__(self) -> None:
+        super().__init__("No se puede eliminar: el departamento esta asignado a empleados, puestos o vacantes")
+
+
 class PuestoNoEncontradoError(AppException):
     status_code = 404
     code = "PUESTO_NO_ENCONTRADO"
 
     def __init__(self) -> None:
         super().__init__("El puesto indicado no existe")
+
+
+class PuestoEnUsoError(AppException):
+    status_code = 409
+    code = "PUESTO_EN_USO"
+
+    def __init__(self) -> None:
+        super().__init__("No se puede eliminar: el puesto esta asignado a uno o mas empleados")
 
 
 class ContratoNoEncontradoError(AppException):

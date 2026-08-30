@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarClock,
   ClipboardCheck,
+  FolderKanban,
   GraduationCap,
   IdCard,
   LayoutDashboard,
@@ -113,16 +114,28 @@ export function AppSidebar() {
                 </>
               )}
               {user?.rol === "ADMIN_RRHH" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={location.pathname === "/usuarios"}
-                    tooltip="Usuarios"
-                    render={<Link to="/usuarios" />}
-                  >
-                    <Users />
-                    <span>Usuarios</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location.pathname === "/usuarios"}
+                      tooltip="Usuarios"
+                      render={<Link to="/usuarios" />}
+                    >
+                      <Users />
+                      <span>Usuarios</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location.pathname === "/catalogos"}
+                      tooltip="Catalogos"
+                      render={<Link to="/catalogos" />}
+                    >
+                      <FolderKanban />
+                      <span>Catalogos</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
             </SidebarMenu>
           </SidebarGroupContent>
