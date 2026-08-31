@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .env
 *.db
+*.db.bak
 app/hrmsystemfastenv/
 .pytest_cache/
 /storage/
